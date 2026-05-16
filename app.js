@@ -221,6 +221,14 @@ function hideAllPages() {
   });
 }
 
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: "auto"
+  });
+}
+
 function getStorageKey() {
   return `store-cash-book-${currentYear}-${currentMonth}`;
 }
@@ -393,6 +401,7 @@ function openDay(day) {
 
   hideAllPages();
   document.getElementById("dayPage").classList.add("active");
+  scrollToTop();
 
   document.getElementById("selectedDateTitle").textContent =
     `${currentYear}年${currentMonth}月${currentDay}日`;
@@ -407,6 +416,7 @@ function openDay(day) {
 function showMonthPage() {
   hideAllPages();
   document.getElementById("monthPage").classList.add("active");
+  scrollToTop();
 
   generateMonth();
   applyPermissions();
@@ -1208,6 +1218,7 @@ function showReservePage() {
 
   hideAllPages();
   document.getElementById("reservePage").classList.add("active");
+  scrollToTop();
 
   renderReserveInputs();
   renderReserveSummary();
