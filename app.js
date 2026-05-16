@@ -33,14 +33,13 @@ const defaultReserveCash = {
   10: { count: 60, target: 60 }
 };
 
-const reserveStorageKey = "store-cash-book-reserve";
-
 let currentYear = 2026;
 let currentMonth = 5;
 let currentDay = null;
 let currentUser = null;
 let currentStoreId = null;
 let currentMonthData = {};
+let currentReserveData = null;
 
 let currentExchangePlan = {
   giveToReserve: [],
@@ -526,7 +525,7 @@ function renderMonthSummary(monthData) {
     formatYen(totalIncome);
 }
 
-function openDay(day) {
+async function openDay(day) {
   currentDay = day;
 
   hideAllPages();
@@ -535,6 +534,8 @@ function openDay(day) {
 
   document.getElementById("selectedDateTitle").textContent =
     `${currentYear}年${currentMonth}月${currentDay}日`;
+
+  await loadReserveDataFromSupabase();
 
   renderCashInputs();
   renderNonCashInputs();
@@ -1186,7 +1187,12 @@ async function applyExchangeToReserve() {
     reserveData[item.denom].count -= item.count;
   });
 
-  setReserveData(reserveData);
+  try {
+    await saveReserveDataToSupabase(reserveData);
+  } catch (error) {
+    alert("备用金云端更新失败：" + error.message);
+    return;
+  }
 
   const cash = getCurrentCashInput();
   const nonCash = getCurrentNonCashInput();
@@ -1213,7 +1219,7 @@ async function applyExchangeToReserve() {
     calculateCurrentDay();
     renderExchangeActionStatus();
 
-    alert("备用金库存已更新，每日数据已保存到云端。");
+    alert("备用金库存和每日数据已保存到云端。");
   } catch (error) {
     alert("执行兑换后的云端保存失败：" + error.message);
   }
@@ -1232,7 +1238,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "2.7-supabase-daily-records-delete",
+    version: "2.8-supabase-daily-reserve-cloud",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -1315,7 +1321,8 @@ async function importBackupFile(event) {
       }
 
       if (backupData.reserveData) {
-        setReserveData(normalizeReserveData(backupData.reserveData));
+        const reserveData = normalizeReserveData(backupData.reserveData);
+        await saveReserveDataToSupabase(reserveData);
       }
 
       await generateMonth();
@@ -1335,22 +1342,6 @@ async function importBackupFile(event) {
 /* =========================
    备用金管理
 ========================= */
-
-function getReserveData() {
-  const saved = localStorage.getItem(reserveStorageKey);
-
-  if (!saved) {
-    return cloneReserveData(defaultReserveCash);
-  }
-
-  try {
-    const parsed = JSON.parse(saved);
-    return normalizeReserveData(parsed);
-  } catch (error) {
-    console.error("读取备用金数据失败", error);
-    return cloneReserveData(defaultReserveCash);
-  }
-}
 
 function normalizeReserveData(rawData) {
   const reserve = cloneReserveData(defaultReserveCash);
@@ -1386,11 +1377,77 @@ function cloneReserveData(reserveData) {
   return copied;
 }
 
-function setReserveData(reserveData) {
-  localStorage.setItem(reserveStorageKey, JSON.stringify(reserveData));
+async function loadReserveDataFromSupabase() {
+  if (!currentStoreId) {
+    currentReserveData = cloneReserveData(defaultReserveCash);
+    return currentReserveData;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("reserve_cash")
+    .select("denomination, count, target")
+    .eq("store_id", currentStoreId)
+    .order("denomination", { ascending: false });
+
+  if (error) {
+    alert("读取云端备用金失败：" + error.message);
+    currentReserveData = cloneReserveData(defaultReserveCash);
+    return currentReserveData;
+  }
+
+  const reserve = cloneReserveData(defaultReserveCash);
+
+  (data || []).forEach(row => {
+    reserve[row.denomination] = {
+      count: Number(row.count || 0),
+      target: Number(row.target || 0)
+    };
+  });
+
+  currentReserveData = reserve;
+  return currentReserveData;
 }
 
-function showReservePage() {
+async function saveReserveDataToSupabase(reserveData) {
+  if (!canAdmin()) {
+    throw new Error("没有备用金操作权限。");
+  }
+
+  if (!currentStoreId) {
+    throw new Error("未读取到默认店铺。");
+  }
+
+  const rows = denominations.map(denom => ({
+    store_id: currentStoreId,
+    denomination: denom,
+    count: Number(reserveData[denom]?.count || 0),
+    target: Number(reserveData[denom]?.target || 0),
+    updated_by: currentUser?.id || null
+  }));
+
+  const { error } = await supabaseClient
+    .from("reserve_cash")
+    .upsert(rows, {
+      onConflict: "store_id,denomination"
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  currentReserveData = cloneReserveData(reserveData);
+  return currentReserveData;
+}
+
+function getReserveData() {
+  if (!currentReserveData) {
+    return cloneReserveData(defaultReserveCash);
+  }
+
+  return cloneReserveData(currentReserveData);
+}
+
+async function showReservePage() {
   if (!canAdmin()) {
     alert("没有权限。");
     return;
@@ -1399,6 +1456,8 @@ function showReservePage() {
   hideAllPages();
   document.getElementById("reservePage").classList.add("active");
   scrollToTop();
+
+  await loadReserveDataFromSupabase();
 
   renderReserveInputs();
   renderReserveSummary();
@@ -1467,20 +1526,25 @@ function getReserveInputData() {
   return reserveData;
 }
 
-function saveReserveData() {
+async function saveReserveData() {
   if (!canAdmin()) {
     alert("没有权限。");
     return;
   }
 
   const reserveData = getReserveInputData();
-  setReserveData(reserveData);
 
-  renderReserveSummary(reserveData);
-  renderReserveAlerts(reserveData);
-  renderReserveRebalancePlan(reserveData);
+  try {
+    await saveReserveDataToSupabase(reserveData);
 
-  alert("备用金设置已保存到本机。");
+    renderReserveSummary(reserveData);
+    renderReserveAlerts(reserveData);
+    renderReserveRebalancePlan(reserveData);
+
+    alert("备用金设置已保存到云端。");
+  } catch (error) {
+    alert("备用金保存失败：" + error.message);
+  }
 }
 
 function renderReserveLiveInfoFromInputs() {
@@ -1686,7 +1750,7 @@ function renderReserveRebalancePlan(optionalReserveData) {
   }
 }
 
-function confirmAndRebalanceReserve() {
+async function confirmAndRebalanceReserve() {
   if (!canAdmin()) {
     alert("没有权限。");
     return;
@@ -1733,14 +1797,18 @@ function confirmAndRebalanceReserve() {
     reserveData[denom].count = reserveData[denom].target;
   });
 
-  setReserveData(reserveData);
+  try {
+    await saveReserveDataToSupabase(reserveData);
 
-  renderReserveInputs();
-  renderReserveSummary(reserveData);
-  renderReserveAlerts(reserveData);
-  renderReserveRebalancePlan(reserveData);
+    renderReserveInputs();
+    renderReserveSummary(reserveData);
+    renderReserveAlerts(reserveData);
+    renderReserveRebalancePlan(reserveData);
 
-  alert("备用金库存已更新为目标库存。");
+    alert("备用金库存已更新为目标库存，并保存到云端。");
+  } catch (error) {
+    alert("备用金整理保存失败：" + error.message);
+  }
 }
 
 function renderReservePreview(container, giveToReserve, takeFromReserve) {
