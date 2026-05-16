@@ -9,7 +9,7 @@
 
   <title>店铺记账系统</title>
 
-  <link rel="stylesheet" href="style.css?v=29" />
+  <link rel="stylesheet" href="style.css?v=30" />
 </head>
 <body>
 
@@ -92,6 +92,11 @@
               style="display: none;"
               onchange="importBackupFile(event)"
             />
+          </div>
+
+          <div class="backup-buttons">
+            <button class="sub-btn" type="button" onclick="exportMonthlyCsvReport()">导出月度CSV</button>
+            <button class="sub-btn" type="button" onclick="printMonthlyReport()">打印月度报表</button>
           </div>
 
           <button class="reserve-btn admin-only" type="button" onclick="showReservePage()">备用金管理</button>
@@ -277,6 +282,6 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>

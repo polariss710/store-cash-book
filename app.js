@@ -1260,6 +1260,377 @@ async function applyExchangeToReserve() {
   }
 }
 
+
+/* =========================
+   月度报表导出
+========================= */
+
+function getDailyReportRows() {
+  const monthData = getMonthData();
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+  const rows = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayData = monthData[day];
+
+    if (!dayData || !dayData.cash) {
+      continue;
+    }
+
+    const cash = dayData.cash || {};
+    const nonCash = dayData.nonCash || {};
+    const cashTotal = calculateTotal(cash);
+    const cashIncome = cashTotal - fixedChangeAmount;
+    const paypay = Number(nonCash.paypay || 0);
+    const point = Number(nonCash.point || 0);
+    const credit = Number(nonCash.credit || 0);
+    const totalIncome = cashIncome + paypay + point + credit;
+
+    rows.push({
+      day,
+      date: formatDateKey(currentYear, currentMonth, day),
+      cash10000: Number(cash[10000] || 0),
+      cash5000: Number(cash[5000] || 0),
+      cash1000: Number(cash[1000] || 0),
+      cash500: Number(cash[500] || 0),
+      cash100: Number(cash[100] || 0),
+      cash50: Number(cash[50] || 0),
+      cash10: Number(cash[10] || 0),
+      cashTotal,
+      cashIncome,
+      paypay,
+      point,
+      credit,
+      totalIncome,
+      exchangeStatus: dayData.exchangeApplied ? "已执行" : "未执行"
+    });
+  }
+
+  return rows;
+}
+
+function getMonthlyReportSummary(rows) {
+  return rows.reduce((summary, row) => {
+    summary.savedDays += 1;
+    summary.cashIncome += row.cashIncome;
+    summary.paypay += row.paypay;
+    summary.point += row.point;
+    summary.credit += row.credit;
+    summary.totalIncome += row.totalIncome;
+    return summary;
+  }, {
+    savedDays: 0,
+    cashIncome: 0,
+    paypay: 0,
+    point: 0,
+    credit: 0,
+    totalIncome: 0
+  });
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function exportMonthlyCsvReport() {
+  const rows = getDailyReportRows();
+
+  if (rows.length === 0) {
+    alert("当前月份没有可导出的数据。");
+    return;
+  }
+
+  const summary = getMonthlyReportSummary(rows);
+
+  const lines = [];
+
+  lines.push(["店铺记账系统 月度CSV报表"].map(csvEscape).join(","));
+  lines.push(["月份", `${currentYear}年${currentMonth}月`].map(csvEscape).join(","));
+  lines.push(["已录入天数", summary.savedDays].map(csvEscape).join(","));
+  lines.push(["现金收入合计", summary.cashIncome].map(csvEscape).join(","));
+  lines.push(["PayPay合计", summary.paypay].map(csvEscape).join(","));
+  lines.push(["积分合计", summary.point].map(csvEscape).join(","));
+  lines.push(["信用卡合计", summary.credit].map(csvEscape).join(","));
+  lines.push(["总收入", summary.totalIncome].map(csvEscape).join(","));
+  lines.push("");
+
+  lines.push([
+    "日期",
+    "现金收入",
+    "PayPay",
+    "积分",
+    "信用卡",
+    "当日总收入",
+    "兑换状态",
+    "10000円数量",
+    "5000円数量",
+    "1000円数量",
+    "500円数量",
+    "100円数量",
+    "50円数量",
+    "10円数量",
+    "现金总额"
+  ].map(csvEscape).join(","));
+
+  rows.forEach(row => {
+    lines.push([
+      row.date,
+      row.cashIncome,
+      row.paypay,
+      row.point,
+      row.credit,
+      row.totalIncome,
+      row.exchangeStatus,
+      row.cash10000,
+      row.cash5000,
+      row.cash1000,
+      row.cash500,
+      row.cash100,
+      row.cash50,
+      row.cash10,
+      row.cashTotal
+    ].map(csvEscape).join(","));
+  });
+
+  const csvText = "\uFEFF" + lines.join("\n");
+  const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+
+  const fileName =
+    `store-cash-book-report-${currentYear}-${String(currentMonth).padStart(2, "0")}.csv`;
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function printMonthlyReport() {
+  const rows = getDailyReportRows();
+
+  if (rows.length === 0) {
+    alert("当前月份没有可打印的数据。");
+    return;
+  }
+
+  const summary = getMonthlyReportSummary(rows);
+
+  const rowHtml = rows.map(row => `
+    <tr>
+      <td>${escapeHtml(row.date)}</td>
+      <td class="num">${formatYen(row.cashIncome)}</td>
+      <td class="num">${formatYen(row.paypay)}</td>
+      <td class="num">${formatYen(row.point)}</td>
+      <td class="num">${formatYen(row.credit)}</td>
+      <td class="num strong">${formatYen(row.totalIncome)}</td>
+      <td>${escapeHtml(row.exchangeStatus)}</td>
+    </tr>
+  `).join("");
+
+  const detailRowHtml = rows.map(row => `
+    <tr>
+      <td>${escapeHtml(row.date)}</td>
+      <td class="num">${row.cash10000}</td>
+      <td class="num">${row.cash5000}</td>
+      <td class="num">${row.cash1000}</td>
+      <td class="num">${row.cash500}</td>
+      <td class="num">${row.cash100}</td>
+      <td class="num">${row.cash50}</td>
+      <td class="num">${row.cash10}</td>
+      <td class="num">${formatYen(row.cashTotal)}</td>
+    </tr>
+  `).join("");
+
+  const reportHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>${currentYear}年${currentMonth}月 店铺月度报表</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+      color: #111827;
+      margin: 24px;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 4px;
+      text-align: center;
+    }
+    .subtitle {
+      text-align: center;
+      color: #4b5563;
+      margin-bottom: 20px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .box {
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 10px;
+      background: #f9fafb;
+    }
+    .label {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .value {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 6px;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+    }
+    .num {
+      text-align: right;
+    }
+    .strong {
+      font-weight: 700;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-top: 24px;
+    }
+    .footer {
+      margin-top: 20px;
+      text-align: right;
+      font-size: 11px;
+      color: #6b7280;
+    }
+    @media print {
+      body { margin: 12mm; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="text-align:right;margin-bottom:12px;">
+    <button onclick="window.print()" style="padding:8px 14px;">打印 / 另存为PDF</button>
+  </div>
+
+  <h1>店铺记账系统 月度报表</h1>
+  <div class="subtitle">${currentYear}年${currentMonth}月</div>
+
+  <div class="summary">
+    <div class="box">
+      <div class="label">已录入天数</div>
+      <div class="value">${summary.savedDays}天</div>
+    </div>
+    <div class="box">
+      <div class="label">现金收入合计</div>
+      <div class="value">${formatYen(summary.cashIncome)}</div>
+    </div>
+    <div class="box">
+      <div class="label">PayPay合计</div>
+      <div class="value">${formatYen(summary.paypay)}</div>
+    </div>
+    <div class="box">
+      <div class="label">积分合计</div>
+      <div class="value">${formatYen(summary.point)}</div>
+    </div>
+    <div class="box">
+      <div class="label">信用卡合计</div>
+      <div class="value">${formatYen(summary.credit)}</div>
+    </div>
+    <div class="box">
+      <div class="label">总收入</div>
+      <div class="value">${formatYen(summary.totalIncome)}</div>
+    </div>
+  </div>
+
+  <div class="section-title">每日收入明细</div>
+  <table>
+    <thead>
+      <tr>
+        <th>日期</th>
+        <th>现金收入</th>
+        <th>PayPay</th>
+        <th>积分</th>
+        <th>信用卡</th>
+        <th>当日总收入</th>
+        <th>兑换状态</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowHtml}
+    </tbody>
+  </table>
+
+  <div class="section-title">现金数量明细</div>
+  <table>
+    <thead>
+      <tr>
+        <th>日期</th>
+        <th>10000円</th>
+        <th>5000円</th>
+        <th>1000円</th>
+        <th>500円</th>
+        <th>100円</th>
+        <th>50円</th>
+        <th>10円</th>
+        <th>现金总额</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${detailRowHtml}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    输出时间：${new Date().toLocaleString("ja-JP")}
+  </div>
+</body>
+</html>`;
+
+  const reportWindow = window.open("", "_blank");
+
+  if (!reportWindow) {
+    alert("浏览器阻止了弹出窗口。请允许弹出窗口后重试。");
+    return;
+  }
+
+  reportWindow.document.open();
+  reportWindow.document.write(reportHtml);
+  reportWindow.document.close();
+}
+
 /* =========================
    导入导出
 ========================= */
@@ -1273,7 +1644,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "2.9-supabase-daily-reserve-exchange-log-undo",
+    version: "3.0-monthly-report-export",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
