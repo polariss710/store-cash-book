@@ -77,16 +77,26 @@ async function login() {
     return;
   }
 
-  const email = document.getElementById("loginEmail").value.trim();
+  const username = document.getElementById("loginUsername").value.trim();
   const password = document.getElementById("loginPassword").value;
 
-  if (!email || !password) {
-    alert("请输入邮箱和密码。");
+  if (!username || !password) {
+    alert("请输入用户名和密码。");
+    return;
+  }
+
+  const { data: emailData, error: emailError } = await supabaseClient
+    .rpc("get_email_by_username", {
+      input_username: username
+    });
+
+  if (emailError || !emailData) {
+    alert("用户名不存在。");
     return;
   }
 
   const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
+    email: emailData,
     password
   });
 
@@ -129,7 +139,7 @@ async function restoreLogin() {
 async function loadCurrentUserFromSupabase(user) {
   const { data: profile, error } = await supabaseClient
     .from("profiles")
-    .select("id, email, display_name, role")
+    .select("id, email, username, display_name, role")
     .eq("id", user.id)
     .single();
 
@@ -147,7 +157,7 @@ async function loadCurrentUserFromSupabase(user) {
   currentUser = {
     id: user.id,
     email: user.email,
-    username: profile.display_name || profile.email || user.email,
+    username: profile.display_name || profile.username || profile.email || user.email,
     role: profile.role
   };
 
