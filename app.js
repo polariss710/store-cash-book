@@ -262,7 +262,7 @@ async function loadCurrentUserFromSupabase(user) {
   showApp();
 }
 
-async async function loadDefaultStore() {
+async function loadDefaultStore() {
   const { data, error } = await supabaseClient
     .from("stores")
     .select("id, store_name, paypay_fee_rate, point_fee_rate, credit_fee_rate")
