@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
   <title>店铺记账系统</title>
 
   <link rel="stylesheet" href="style.css?v=24" />
 </head>
+
 <body>
 
   <!-- 登录页面 -->
@@ -20,8 +19,8 @@
       <p>Supabase 云端登录测试版</p>
 
       <div class="form-row vertical">
-        <label for="loginEmail">用户名</label>
-        <input id="loginEmail" type="email" autocomplete="username" />
+        <label for="loginUsername">用户名</label>
+        <input id="loginUsername" type="text" autocomplete="username" />
       </div>
 
       <div class="form-row vertical">
@@ -84,15 +83,11 @@
 
           <div class="backup-buttons">
             <button class="sub-btn" type="button" onclick="exportCurrentMonthData()">导出本月备份</button>
-            <button class="sub-btn admin-only" type="button" onclick="document.getElementById('importFileInput').click()">导入备份</button>
+            <button class="sub-btn admin-only" type="button"
+              onclick="document.getElementById('importFileInput').click()">导入备份</button>
 
-            <input
-              id="importFileInput"
-              type="file"
-              accept=".json,application/json"
-              style="display: none;"
-              onchange="importBackupFile(event)"
-            />
+            <input id="importFileInput" type="file" accept=".json,application/json" style="display: none;"
+              onchange="importBackupFile(event)" />
           </div>
 
           <button class="reserve-btn admin-only" type="button" onclick="showReservePage()">备用金管理</button>
@@ -278,4 +273,5 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js?v=24"></script>
 </body>
+
 </html>
