@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Supabase 登录测试</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+      background: #f5f5f5;
+      color: #111827;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    p {
+      margin: 0 0 18px;
+      color: #666;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    input,
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+    }
+
+    input {
+      border: 1px solid #d1d5db;
+    }
+
+    button {
+      margin-top: 12px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #4b5563;
+    }
+
+    button.danger {
+      background: #dc2626;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .result-title {
+      margin-top: 18px;
+      font-weight: 700;
+    }
+
+    pre {
+      margin-top: 8px;
+      background: #111827;
+      color: #e5e7eb;
+      padding: 12px;
+      border-radius: 12px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 120px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .note {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Supabase 登录测试</h1>
+    <p>测试 Supabase Auth 登录与 profiles 权限读取</p>
+
+    <label for="emailInput">邮箱</label>
+    <input
+      id="emailInput"
+      type="email"
+      placeholder="请输入 Supabase Auth 用户邮箱"
+      autocomplete="username"
+    />
+
+    <label for="passwordInput">密码</label>
+    <input
+      id="passwordInput"
+      type="password"
+      placeholder="请输入密码"
+      autocomplete="current-password"
+    />
+
+    <button type="button" onclick="loginWithSupabase()">登录</button>
+    <button type="button" class="secondary" onclick="getCurrentUser()">读取当前用户</button>
+    <button type="button" class="danger" onclick="logout()">退出登录</button>
+
+    <div class="note">
+      正常流程：刷新页面后应显示「Supabase 初始化成功」。然后输入邮箱密码，点击登录。登录成功后应读取 profiles 表中的 role。
+    </div>
+
+    <div class="result-title">结果</div>
+    <pre id="resultBox">页面已加载，等待 Supabase 初始化...</pre>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const SUPABASE_URL = "https://ahtgiwdzocerkonrjmdo.supabase.co";
+
+    /*
+      这里换成 Supabase 后台 API Keys 页面里的 Publishable key。
+      形如：
+      sb_publishable_xxxxxxxxxxxxxxxxxxxxxxxxx
+    */
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_HTCFg_w3vmdNqfG2ZE46-A_6KXpxAnz";
+
+    let supabaseClient = null;
+
+    function showResult(data) {
+      const box = document.getElementById("resultBox");
+
+      if (!box) return;
+
+      box.textContent =
+        typeof data === "string"
+          ? data
+          : JSON.stringify(data, null, 2);
+    }
+
+    window.addEventListener("load", function () {
+      try {
+        if (!window.supabase) {
+          showResult(
+            "Supabase JS 没有加载成功。\n\n" +
+            "可能原因：\n" +
+            "1. 网络无法访问 jsdelivr CDN\n" +
+            "2. script 标签被删除或写错\n" +
+            "3. 浏览器阻止了外部脚本"
+          );
+          return;
+        }
+
+        if (
+          !SUPABASE_PUBLISHABLE_KEY ||
+          SUPABASE_PUBLISHABLE_KEY === "这里换成你的 sb_publishable key"
+        ) {
+          showResult(
+            "请先替换 SUPABASE_PUBLISHABLE_KEY。\n\n" +
+            "位置：Supabase 后台 → Project Settings → API Keys → Publishable key\n\n" +
+            "注意：不要使用 Secret key。"
+          );
+          return;
+        }
+
+        supabaseClient = window.supabase.createClient(
+          SUPABASE_URL,
+          SUPABASE_PUBLISHABLE_KEY
+        );
+
+        showResult(
+          "Supabase 初始化成功，等待操作...\n\n" +
+          "当前项目：\n" +
+          SUPABASE_URL
+        );
+      } catch (error) {
+        showResult("初始化失败：\n" + error.message);
+      }
+    });
+
+    async function loginWithSupabase() {
+      try {
+        if (!supabaseClient) {
+          showResult("Supabase 尚未初始化。请检查 URL / Publishable key / CDN 是否正确。");
+          return;
+        }
+
+        const email = document.getElementById("emailInput").value.trim();
+        const password = document.getElementById("passwordInput").value;
+
+        if (!email || !password) {
+          showResult("请输入邮箱和密码。");
+          return;
+        }
+
+        showResult("正在登录...");
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) {
+          showResult({
+            message: "登录失败",
+            errorMessage: error.message,
+            error
+          });
+          return;
+        }
+
+        if (!data || !data.user) {
+          showResult("登录返回结果异常：没有 user 数据。");
+          return;
+        }
+
+        const userId = data.user.id;
+
+        showResult("登录成功，正在读取 profiles...");
+
+        const { data: profile, error: profileError } = await supabaseClient
+          .from("profiles")
+          .select("id, email, display_name, role")
+          .eq("id", userId)
+          .single();
+
+        if (profileError) {
+          showResult({
+            message: "登录成功，但读取 profiles 失败",
+            reason: "通常是 profiles 表里没有该用户 id，或者 RLS policy 未允许读取。",
+            user: {
+              id: data.user.id,
+              email: data.user.email
+            },
+            profileError
+          });
+          return;
+        }
+
+        showResult({
+          message: "登录成功，并成功读取 profiles",
+          user: {
+            id: data.user.id,
+            email: data.user.email
+          },
+          profile
+        });
+      } catch (error) {
+        showResult({
+          message: "登录过程发生未捕获错误",
+          errorMessage: error.message,
+          error
+        });
+      }
+    }
+
+    async function getCurrentUser() {
+      try {
+        if (!supabaseClient) {
+          showResult("Supabase 尚未初始化。");
+          return;
+        }
+
+        showResult("正在读取当前用户...");
+
+        const { data, error } = await supabaseClient.auth.getUser();
+
+        if (error) {
+          showResult({
+            message: "读取当前用户失败",
+            errorMessage: error.message,
+            error
+          });
+          return;
+        }
+
+        if (!data || !data.user) {
+          showResult("当前没有登录用户。");
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabaseClient
+          .from("profiles")
+          .select("id, email, display_name, role")
+          .eq("id", data.user.id)
+          .single();
+
+        showResult({
+          message: "当前用户读取完成",
+          user: {
+            id: data.user.id,
+            email: data.user.email
+          },
+          profile,
+          profileError
+        });
+      } catch (error) {
+        showResult({
+          message: "读取当前用户发生未捕获错误",
+          errorMessage: error.message,
+          error
+        });
+      }
+    }
+
+    async function logout() {
+      try {
+        if (!supabaseClient) {
+          showResult("Supabase 尚未初始化。");
+          return;
+        }
+
+        const { error } = await supabaseClient.auth.signOut();
+
+        if (error) {
+          showResult({
+            message: "退出失败",
+            errorMessage: error.message,
+            error
+          });
+          return;
+        }
+
+        showResult("已退出登录。");
+      } catch (error) {
+        showResult({
+          message: "退出登录发生未捕获错误",
+          errorMessage: error.message,
+          error
+        });
+      }
+    }
+  </script>
+
+</body>
+</html>
