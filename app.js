@@ -255,6 +255,7 @@ function renderUserList() {
     passwordInput.placeholder = "新密码";
 
     const updateBtn = document.createElement("button");
+    updateBtn.type = "button";
     updateBtn.className = "user-action-btn";
     updateBtn.textContent = "更新";
     updateBtn.onclick = () => {
@@ -262,6 +263,7 @@ function renderUserList() {
     };
 
     const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
     deleteBtn.className = "user-action-btn user-delete-btn";
     deleteBtn.textContent = "删除";
     deleteBtn.onclick = () => {
@@ -554,6 +556,7 @@ function renderCashInputs() {
     input.addEventListener("input", calculateCurrentDay);
 
     const minusBtn = document.createElement("button");
+    minusBtn.type = "button";
     minusBtn.className = "small-btn write-only";
     minusBtn.textContent = "-";
     minusBtn.addEventListener("click", () => {
@@ -564,6 +567,7 @@ function renderCashInputs() {
     });
 
     const plusBtn = document.createElement("button");
+    plusBtn.type = "button";
     plusBtn.className = "small-btn write-only";
     plusBtn.textContent = "+";
     plusBtn.addEventListener("click", () => {
@@ -952,9 +956,9 @@ function loadCurrentDayData() {
     if (!input) return;
 
     if (dayData && dayData.cash) {
-      input.value = dayData.cash[denom] || "";
+      input.value = dayData.cash[denom] ?? "";
     } else {
-      input.value = "";
+      input.value = standardCash[denom] ?? 0;
     }
   });
 
@@ -963,7 +967,7 @@ function loadCurrentDayData() {
     if (!input) return;
 
     if (dayData && dayData.nonCash) {
-      input.value = dayData.nonCash[item.key] || "";
+      input.value = dayData.nonCash[item.key] ?? "";
     } else {
       input.value = "";
     }
@@ -1165,7 +1169,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "1.8-local-login",
+    version: "1.9-default-cash-input",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

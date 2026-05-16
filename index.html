@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
 
   <title>店铺记账系统</title>
 
@@ -26,7 +29,7 @@
         <input id="loginPassword" type="password" autocomplete="current-password" />
       </div>
 
-      <button class="primary-btn" onclick="login()">登录</button>
+      <button class="primary-btn" type="button" onclick="login()">登录</button>
 
       <div class="login-hint">
         初始管理员账号：admin / admin123
@@ -43,8 +46,8 @@
 
       <div class="user-bar">
         <span id="currentUserText">未登录</span>
-        <button class="small-header-btn admin-only" onclick="showUserPage()">用户管理</button>
-        <button class="small-header-btn" onclick="logout()">退出登录</button>
+        <button class="small-header-btn admin-only" type="button" onclick="showUserPage()">用户管理</button>
+        <button class="small-header-btn" type="button" onclick="logout()">退出登录</button>
       </div>
     </header>
 
@@ -78,11 +81,11 @@
             </select>
           </div>
 
-          <button class="primary-btn" onclick="generateMonth()">生成 / 读取本月</button>
+          <button class="primary-btn" type="button" onclick="generateMonth()">生成 / 读取本月</button>
 
           <div class="backup-buttons">
-            <button class="sub-btn" onclick="exportCurrentMonthData()">导出本月备份</button>
-            <button class="sub-btn admin-only" onclick="document.getElementById('importFileInput').click()">导入备份</button>
+            <button class="sub-btn" type="button" onclick="exportCurrentMonthData()">导出本月备份</button>
+            <button class="sub-btn admin-only" type="button" onclick="document.getElementById('importFileInput').click()">导入备份</button>
 
             <input
               id="importFileInput"
@@ -93,7 +96,7 @@
             />
           </div>
 
-          <button class="reserve-btn admin-only" onclick="showReservePage()">备用金管理</button>
+          <button class="reserve-btn admin-only" type="button" onclick="showReservePage()">备用金管理</button>
         </div>
 
         <div class="card result-card">
@@ -139,7 +142,7 @@
       <!-- 每日录入页面 -->
       <section id="dayPage" class="page">
         <div class="card">
-          <button class="back-btn" onclick="showMonthPage()">← 返回月份</button>
+          <button class="back-btn" type="button" onclick="showMonthPage()">← 返回月份</button>
           <h2 id="selectedDateTitle">日期</h2>
 
           <div class="standard-box">
@@ -206,16 +209,16 @@
         <div class="card admin-only">
           <h2>执行兑换</h2>
           <div id="exchangeActionArea" class="diff-area">请先确认上方兑换建议。</div>
-          <button class="execute-btn" onclick="confirmAndApplyExchange()">确认执行兑换并更新备用金</button>
+          <button class="execute-btn" type="button" onclick="confirmAndApplyExchange()">确认执行兑换并更新备用金</button>
         </div>
 
-        <button class="save-btn write-only" onclick="saveCurrentDay()">保存当天数据</button>
+        <button class="save-btn write-only" type="button" onclick="saveCurrentDay()">保存当天数据</button>
       </section>
 
       <!-- 备用金管理页面 -->
       <section id="reservePage" class="page">
         <div class="card">
-          <button class="back-btn" onclick="showMonthPage()">← 返回月份</button>
+          <button class="back-btn" type="button" onclick="showMonthPage()">← 返回月份</button>
           <h2>备用金管理</h2>
 
           <div class="standard-box">
@@ -236,7 +239,7 @@
           <h2>备用金库存设置</h2>
           <div id="reserveInputArea"></div>
 
-          <button class="save-btn admin-only" onclick="saveReserveData()">保存备用金设置</button>
+          <button class="save-btn admin-only" type="button" onclick="saveReserveData()">保存备用金设置</button>
         </div>
 
         <div class="card result-card">
@@ -266,14 +269,14 @@
         <div class="card">
           <h2>备用金内部整理建议</h2>
           <div id="reserveRebalanceArea" class="diff-area">暂无数据</div>
-          <button class="execute-btn admin-only" onclick="confirmAndRebalanceReserve()">确认已整理备用金</button>
+          <button class="execute-btn admin-only" type="button" onclick="confirmAndRebalanceReserve()">确认已整理备用金</button>
         </div>
       </section>
 
       <!-- 用户管理页面 -->
       <section id="userPage" class="page">
         <div class="card">
-          <button class="back-btn" onclick="showMonthPage()">← 返回月份</button>
+          <button class="back-btn" type="button" onclick="showMonthPage()">← 返回月份</button>
           <h2>用户管理</h2>
           <div class="standard-box">
             <span>本地简易权限管理。用户信息保存在当前浏览器 localStorage 中。</span>
@@ -302,7 +305,7 @@
             </select>
           </div>
 
-          <button class="primary-btn" onclick="addUser()">新增用户</button>
+          <button class="primary-btn" type="button" onclick="addUser()">新增用户</button>
         </div>
 
         <div class="card">

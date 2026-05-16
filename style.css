@@ -2,11 +2,23 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
   background: #f5f5f5;
   color: #222;
+}
+
+button,
+input,
+select,
+.day-card {
+  touch-action: manipulation;
 }
 
 .login-page {
@@ -313,6 +325,9 @@ button:disabled {
   background: #e5e7eb;
   color: #111827;
   font-weight: 700;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .result-card {
