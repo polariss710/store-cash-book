@@ -57,7 +57,7 @@ function initializeSupabase() {
 
   if (
     !SUPABASE_PUBLISHABLE_KEY ||
-    SUPABASE_PUBLISHABLE_KEY === "sb_publishable_HTCFg_w3vmdNqfG2ZE46-A_6KXpxAnz"
+    SUPABASE_PUBLISHABLE_KEY === "这里换成你的 sb_publishable key"
   ) {
     alert("请先在 app.js 中设置 SUPABASE_PUBLISHABLE_KEY。");
     return false;
@@ -1035,7 +1035,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "2.0-supabase-login-local-data",
+    version: "2.0-supabase-login-local-data-v23",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

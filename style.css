@@ -451,35 +451,6 @@ button:disabled {
   font-weight: 700;
 }
 
-.user-row {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-  background: #fafafa;
-}
-
-.user-row-title {
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.user-controls {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.user-action-btn {
-  background: #4b5563;
-  color: white;
-  font-weight: 700;
-}
-
-.user-delete-btn {
-  background: #dc2626;
-}
-
 .save-btn {
   margin-bottom: 24px;
 }
@@ -491,9 +462,5 @@ button:disabled {
 @media (min-width: 640px) {
   .day-list {
     grid-template-columns: repeat(3, 1fr);
-  }
-
-  .user-controls {
-    grid-template-columns: 1fr 1fr 1fr;
   }
 }
