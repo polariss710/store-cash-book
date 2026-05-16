@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
 
   <title>店铺记账系统</title>
 
-  <link rel="stylesheet" href="style.css?v=25" />
+  <link rel="stylesheet" href="style.css?v=27" />
 </head>
-
 <body>
 
   <!-- 登录页面 -->
   <section id="loginPage" class="login-page active">
     <div class="login-card">
       <h1>店铺记账系统</h1>
-      <p>Supabase 云端登录测试版</p>
+      <p>Supabase 云端登录版</p>
 
       <div class="form-row vertical">
         <label for="loginUsername">用户名</label>
@@ -83,11 +84,14 @@
 
           <div class="backup-buttons">
             <button class="sub-btn" type="button" onclick="exportCurrentMonthData()">导出本月备份</button>
-            <button class="sub-btn admin-only" type="button"
-              onclick="document.getElementById('importFileInput').click()">导入备份</button>
-
-            <input id="importFileInput" type="file" accept=".json,application/json" style="display: none;"
-              onchange="importBackupFile(event)" />
+            <button class="sub-btn admin-only" type="button" onclick="document.getElementById('importFileInput').click()">导入备份</button>
+            <input
+              id="importFileInput"
+              type="file"
+              accept=".json,application/json"
+              style="display: none;"
+              onchange="importBackupFile(event)"
+            />
           </div>
 
           <button class="reserve-btn admin-only" type="button" onclick="showReservePage()">备用金管理</button>
@@ -207,6 +211,7 @@
         </div>
 
         <button class="save-btn write-only" type="button" onclick="saveCurrentDay()">保存当天数据</button>
+        <button class="delete-day-btn admin-only" type="button" onclick="deleteCurrentDayData()">删除当天数据</button>
       </section>
 
       <!-- 备用金管理页面 -->
@@ -271,7 +276,6 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=25"></script>
+  <script src="app.js?v=27"></script>
 </body>
-
 </html>

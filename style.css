@@ -464,3 +464,15 @@ button:disabled {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+.delete-day-btn {
+  width: 100%;
+  background: #7f1d1d;
+  color: white;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.delete-day-btn:hover {
+  opacity: 0.88;
+}

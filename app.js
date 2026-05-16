@@ -39,6 +39,8 @@ let currentYear = 2026;
 let currentMonth = 5;
 let currentDay = null;
 let currentUser = null;
+let currentStoreId = null;
+let currentMonthData = {};
 
 let currentExchangePlan = {
   giveToReserve: [],
@@ -55,10 +57,7 @@ function initializeSupabase() {
     return false;
   }
 
-  if (
-    !SUPABASE_PUBLISHABLE_KEY ||
-    SUPABASE_PUBLISHABLE_KEY === "这里换成你的 sb_publishable key"
-  ) {
+  if (!SUPABASE_PUBLISHABLE_KEY) {
     alert("请先在 app.js 中设置 SUPABASE_PUBLISHABLE_KEY。");
     return false;
   }
@@ -114,6 +113,8 @@ async function logout() {
   }
 
   currentUser = null;
+  currentStoreId = null;
+  currentMonthData = {};
 
   document.getElementById("appPage").classList.remove("active");
   document.getElementById("loginPage").classList.add("active");
@@ -161,7 +162,23 @@ async function loadCurrentUserFromSupabase(user) {
     role: profile.role
   };
 
+  await loadDefaultStore();
   showApp();
+}
+
+async function loadDefaultStore() {
+  const { data, error } = await supabaseClient
+    .from("stores")
+    .select("id, store_name")
+    .eq("store_name", "默认店铺")
+    .single();
+
+  if (error || !data) {
+    alert("读取默认店铺失败。请确认 stores 表中存在「默认店铺」。");
+    return;
+  }
+
+  currentStoreId = data.id;
 }
 
 function showLogin() {
@@ -234,22 +251,11 @@ function getStorageKey() {
 }
 
 function getMonthData() {
-  const saved = localStorage.getItem(getStorageKey());
-
-  if (!saved) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(saved);
-  } catch (error) {
-    console.error("读取数据失败", error);
-    return {};
-  }
+  return currentMonthData || {};
 }
 
 function setMonthData(data) {
-  localStorage.setItem(getStorageKey(), JSON.stringify(data));
+  currentMonthData = data || {};
 }
 
 function getDaysInMonth(year, month) {
@@ -258,6 +264,10 @@ function getDaysInMonth(year, month) {
 
 function formatYen(value) {
   return `${Number(value || 0).toLocaleString()}円`;
+}
+
+function formatDateKey(year, month, day) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function calculateTotal(cash) {
@@ -282,14 +292,134 @@ function cloneCash(cash) {
   return copied;
 }
 
+function recordToDayData(record) {
+  if (!record) return null;
+
+  return {
+    id: record.id,
+    date: record.record_date,
+    cash: {
+      10000: record.cash_10000 || 0,
+      5000: record.cash_5000 || 0,
+      1000: record.cash_1000 || 0,
+      500: record.cash_500 || 0,
+      100: record.cash_100 || 0,
+      50: record.cash_50 || 0,
+      10: record.cash_10 || 0
+    },
+    nonCash: {
+      paypay: record.paypay || 0,
+      point: record.point || 0,
+      credit: record.credit || 0
+    },
+    exchangeApplied: Boolean(record.exchange_applied),
+    exchangeAppliedAt: record.exchange_applied_at || null,
+    exchangePlan: null
+  };
+}
+
+function dayDataToRecord(day, dayData) {
+  const cash = dayData.cash || {};
+  const nonCash = dayData.nonCash || {};
+
+  const cashTotal = calculateTotal(cash);
+  const cashIncome = cashTotal - fixedChangeAmount;
+  const paypay = Number(nonCash.paypay || 0);
+  const point = Number(nonCash.point || 0);
+  const credit = Number(nonCash.credit || 0);
+  const totalIncome = cashIncome + paypay + point + credit;
+
+  return {
+    store_id: currentStoreId,
+    record_date: formatDateKey(currentYear, currentMonth, day),
+
+    cash_10000: Number(cash[10000] || 0),
+    cash_5000: Number(cash[5000] || 0),
+    cash_1000: Number(cash[1000] || 0),
+    cash_500: Number(cash[500] || 0),
+    cash_100: Number(cash[100] || 0),
+    cash_50: Number(cash[50] || 0),
+    cash_10: Number(cash[10] || 0),
+
+    paypay,
+    point,
+    credit,
+
+    cash_total: cashTotal,
+    cash_income: cashIncome,
+    total_income: totalIncome,
+
+    exchange_applied: Boolean(dayData.exchangeApplied),
+    exchange_applied_at: dayData.exchangeAppliedAt || null,
+
+    created_by: currentUser?.id || null,
+    updated_by: currentUser?.id || null
+  };
+}
+
+async function loadMonthDataFromSupabase(year, month) {
+  if (!currentStoreId) return {};
+
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = getDaysInMonth(year, month);
+  const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+  const { data, error } = await supabaseClient
+    .from("daily_records")
+    .select("*")
+    .eq("store_id", currentStoreId)
+    .gte("record_date", startDate)
+    .lte("record_date", endDate)
+    .order("record_date", { ascending: true });
+
+  if (error) {
+    alert("读取云端每日数据失败：" + error.message);
+    return {};
+  }
+
+  const monthData = {};
+
+  (data || []).forEach(record => {
+    const day = Number(record.record_date.slice(8, 10));
+    monthData[day] = recordToDayData(record);
+  });
+
+  return monthData;
+}
+
+async function upsertDayDataToSupabase(day, dayData) {
+  const record = dayDataToRecord(day, dayData);
+
+  const { data, error } = await supabaseClient
+    .from("daily_records")
+    .upsert(record, {
+      onConflict: "store_id,record_date"
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return recordToDayData(data);
+}
+
 /* =========================
    月份 / 每日
 ========================= */
 
-function generateMonth() {
+async function generateMonth() {
   currentYear = Number(document.getElementById("yearInput").value);
   currentMonth = Number(document.getElementById("monthInput").value);
 
+  const monthData = await loadMonthDataFromSupabase(currentYear, currentMonth);
+  setMonthData(monthData);
+
+  renderMonth();
+}
+
+function renderMonth() {
   const days = getDaysInMonth(currentYear, currentMonth);
   const monthData = getMonthData();
 
@@ -418,7 +548,7 @@ function showMonthPage() {
   document.getElementById("monthPage").classList.add("active");
   scrollToTop();
 
-  generateMonth();
+  renderMonth();
   applyPermissions();
 }
 
@@ -802,7 +932,7 @@ function renderExchangePlan(remainingCash) {
   renderReservePreview(area, giveToReserve, takeFromReserve);
 }
 
-function saveCurrentDay() {
+async function saveCurrentDay() {
   if (!canWrite()) {
     alert("没有保存权限。");
     return;
@@ -810,15 +940,13 @@ function saveCurrentDay() {
 
   if (!currentDay) return;
 
-  const monthData = getMonthData();
-
   const cash = getCurrentCashInput();
   const nonCash = getCurrentNonCashInput();
 
-  const oldDayData = monthData[currentDay] || {};
+  const oldDayData = currentMonthData[currentDay] || {};
 
-  monthData[currentDay] = {
-    date: `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(currentDay).padStart(2, "0")}`,
+  const dayData = {
+    date: formatDateKey(currentYear, currentMonth, currentDay),
     cash,
     nonCash,
     exchangeApplied: oldDayData.exchangeApplied || false,
@@ -826,11 +954,58 @@ function saveCurrentDay() {
     exchangePlan: oldDayData.exchangePlan || null
   };
 
-  setMonthData(monthData);
-  renderMonthSummary(monthData);
+  try {
+    const savedDay = await upsertDayDataToSupabase(currentDay, dayData);
+    currentMonthData[currentDay] = savedDay;
+
+    renderMonthSummary(currentMonthData);
+    renderExchangeActionStatus();
+
+    alert("当天数据已保存到云端。");
+  } catch (error) {
+    console.error(error);
+    alert("保存云端数据失败：" + error.message);
+  }
+}
+
+async function deleteCurrentDayData() {
+  if (!canAdmin()) {
+    alert("没有删除权限。");
+    return;
+  }
+
+  if (!currentDay || !currentStoreId) {
+    alert("请先选择日期。");
+    return;
+  }
+
+  const dateText = formatDateKey(currentYear, currentMonth, currentDay);
+
+  const ok = confirm(
+    `确定要删除 ${currentYear}年${currentMonth}月${currentDay}日 的云端数据吗？\n\n` +
+    `删除后该日期会恢复为未录入状态。`
+  );
+
+  if (!ok) return;
+
+  const { error } = await supabaseClient
+    .from("daily_records")
+    .delete()
+    .eq("store_id", currentStoreId)
+    .eq("record_date", dateText);
+
+  if (error) {
+    alert("删除云端数据失败：" + error.message);
+    return;
+  }
+
+  delete currentMonthData[currentDay];
+
+  loadCurrentDayData();
+  calculateCurrentDay();
   renderExchangeActionStatus();
 
-  alert("当天数据已保存");
+  alert("当天云端数据已删除。");
 }
 
 function loadCurrentDayData() {
@@ -861,8 +1036,7 @@ function loadCurrentDayData() {
 }
 
 function getCurrentDayData() {
-  const monthData = getMonthData();
-  return monthData[currentDay] || null;
+  return currentMonthData[currentDay] || null;
 }
 
 function isExchangeAlreadyApplied() {
@@ -941,7 +1115,7 @@ function checkReserveShortageForCurrentPlan() {
   return messages;
 }
 
-function confirmAndApplyExchange() {
+async function confirmAndApplyExchange() {
   if (!canAdmin()) {
     alert("没有权限。");
     return;
@@ -995,10 +1169,10 @@ function confirmAndApplyExchange() {
 
   if (!ok) return;
 
-  applyExchangeToReserve();
+  await applyExchangeToReserve();
 }
 
-function applyExchangeToReserve() {
+async function applyExchangeToReserve() {
   const reserveData = getReserveData();
 
   const giveToReserve = currentExchangePlan.giveToReserve || [];
@@ -1014,15 +1188,13 @@ function applyExchangeToReserve() {
 
   setReserveData(reserveData);
 
-  const monthData = getMonthData();
-
   const cash = getCurrentCashInput();
   const nonCash = getCurrentNonCashInput();
 
-  const nowText = new Date().toLocaleString("ja-JP");
+  const nowText = new Date().toISOString();
 
-  monthData[currentDay] = {
-    date: `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(currentDay).padStart(2, "0")}`,
+  const dayData = {
+    date: formatDateKey(currentYear, currentMonth, currentDay),
     cash,
     nonCash,
     exchangeApplied: true,
@@ -1033,13 +1205,18 @@ function applyExchangeToReserve() {
     }
   };
 
-  setMonthData(monthData);
+  try {
+    const savedDay = await upsertDayDataToSupabase(currentDay, dayData);
+    currentMonthData[currentDay] = savedDay;
 
-  renderMonthSummary(monthData);
-  calculateCurrentDay();
-  renderExchangeActionStatus();
+    renderMonthSummary(currentMonthData);
+    calculateCurrentDay();
+    renderExchangeActionStatus();
 
-  alert("备用金库存已更新。");
+    alert("备用金库存已更新，每日数据已保存到云端。");
+  } catch (error) {
+    alert("执行兑换后的云端保存失败：" + error.message);
+  }
 }
 
 /* =========================
@@ -1055,7 +1232,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "2.0-supabase-login-local-data-v23",
+    version: "2.7-supabase-daily-records-delete",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -1086,7 +1263,7 @@ function exportCurrentMonthData() {
   URL.revokeObjectURL(url);
 }
 
-function importBackupFile(event) {
+async function importBackupFile(event) {
   if (!canAdmin()) {
     alert("没有导入权限。");
     return;
@@ -1100,7 +1277,7 @@ function importBackupFile(event) {
 
   const reader = new FileReader();
 
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const backupData = JSON.parse(e.target.result);
 
@@ -1115,8 +1292,8 @@ function importBackupFile(event) {
       }
 
       const ok = confirm(
-        `确定要导入 ${backupData.year}年${backupData.month}月 的备份吗？\n\n` +
-        `注意：这会覆盖当前浏览器中该月份已有的数据。`
+        `确定要导入 ${backupData.year}年${backupData.month}月 的备份到云端吗？\n\n` +
+        `注意：这会覆盖云端该月份相同日期的数据。`
       );
 
       if (!ok) {
@@ -1129,21 +1306,24 @@ function importBackupFile(event) {
       document.getElementById("yearInput").value = currentYear;
       document.getElementById("monthInput").value = currentMonth;
 
-      localStorage.setItem(
-        getStorageKey(),
-        JSON.stringify(backupData.data)
-      );
+      const importData = backupData.data || {};
+      const days = Object.keys(importData);
+
+      for (const dayKey of days) {
+        const day = Number(dayKey);
+        await upsertDayDataToSupabase(day, importData[dayKey]);
+      }
 
       if (backupData.reserveData) {
         setReserveData(normalizeReserveData(backupData.reserveData));
       }
 
-      generateMonth();
+      await generateMonth();
 
-      alert("备份导入完成。");
+      alert("备份已导入云端。");
     } catch (error) {
       console.error(error);
-      alert("导入失败。请确认文件是正确的 JSON 备份文件。");
+      alert("导入失败：" + error.message);
     } finally {
       event.target.value = "";
     }
@@ -1300,7 +1480,7 @@ function saveReserveData() {
   renderReserveAlerts(reserveData);
   renderReserveRebalancePlan(reserveData);
 
-  alert("备用金设置已保存");
+  alert("备用金设置已保存到本机。");
 }
 
 function renderReserveLiveInfoFromInputs() {
