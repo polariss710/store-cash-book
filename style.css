@@ -527,3 +527,10 @@ button:disabled {
 .danger-header-btn {
   background: #7f1d1d;
 }
+
+
+.fee-unit {
+  font-weight: 700;
+  color: #4b5563;
+  min-width: 24px;
+}

@@ -3,7 +3,7 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_HTCFg_w3vmdNqfG2ZE46-A_6KXpxAnz
 
 let supabaseClient = null;
 
-const INACTIVITY_LIMIT_MS = 15 * 60 * 1000;
+const INACTIVITY_LIMIT_MS = 10 * 60 * 1000;
 const activityEvents = ["click", "input", "keydown", "touchstart", "scroll"];
 let inactivityTimer = null;
 let isAutoSigningOut = false;
@@ -43,6 +43,11 @@ let currentMonth = 5;
 let currentDay = null;
 let currentUser = null;
 let currentStoreId = null;
+let currentFeeSettings = {
+  paypay: 0,
+  point: 0,
+  credit: 0
+};
 let currentMonthData = {};
 let currentReserveData = null;
 
@@ -172,7 +177,7 @@ async function autoLogoutByInactivity() {
   document.getElementById("loginPage").classList.add("active");
   document.getElementById("loginPassword").value = "";
 
-  alert("15分钟无操作，已自动退出。请重新登录。");
+  alert("10分钟无操作，已自动退出。请重新登录。");
 
   isAutoSigningOut = false;
 }
@@ -257,19 +262,27 @@ async function loadCurrentUserFromSupabase(user) {
   showApp();
 }
 
-async function loadDefaultStore() {
+async async function loadDefaultStore() {
   const { data, error } = await supabaseClient
     .from("stores")
-    .select("id, store_name")
+    .select("id, store_name, paypay_fee_rate, point_fee_rate, credit_fee_rate")
     .eq("store_name", "默认店铺")
     .single();
 
   if (error || !data) {
-    alert("读取默认店铺失败。请确认 stores 表中存在「默认店铺」。");
+    alert(
+      "读取默认店铺失败。请确认 stores 表中存在「默认店铺」，并且已经执行 v32 手续费字段 SQL。"
+    );
     return;
   }
 
   currentStoreId = data.id;
+
+  currentFeeSettings = {
+    paypay: Number(data.paypay_fee_rate || 0),
+    point: Number(data.point_fee_rate || 0),
+    credit: Number(data.credit_fee_rate || 0)
+  };
 }
 
 function showLogin() {
@@ -371,6 +384,35 @@ function formatDateTimeText(value) {
 
 function formatDateKey(year, month, day) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+
+function calculateFeeAmount(amount, rate) {
+  const numericAmount = Number(amount || 0);
+  const numericRate = Number(rate || 0);
+
+  if (numericAmount <= 0 || numericRate <= 0) {
+    return 0;
+  }
+
+  return Math.round(numericAmount * numericRate / 100);
+}
+
+function calculateNonCashFees(nonCash) {
+  const paypay = Number(nonCash?.paypay || 0);
+  const point = Number(nonCash?.point || 0);
+  const credit = Number(nonCash?.credit || 0);
+
+  const paypayFee = calculateFeeAmount(paypay, currentFeeSettings.paypay);
+  const pointFee = calculateFeeAmount(point, currentFeeSettings.point);
+  const creditFee = calculateFeeAmount(credit, currentFeeSettings.credit);
+
+  return {
+    paypayFee,
+    pointFee,
+    creditFee,
+    totalFee: paypayFee + pointFee + creditFee
+  };
 }
 
 function calculateTotal(cash) {
@@ -587,6 +629,7 @@ function renderMonthSummary(monthData) {
   let paypayTotal = 0;
   let pointTotal = 0;
   let creditTotal = 0;
+  let feeTotal = 0;
 
   Object.keys(monthData).forEach(day => {
     const dayData = monthData[day];
@@ -599,6 +642,7 @@ function renderMonthSummary(monthData) {
     const netIncome = totalCash - fixedChangeAmount;
 
     const nonCash = dayData.nonCash || {};
+    const fees = calculateNonCashFees(nonCash);
 
     savedDays += 1;
 
@@ -606,10 +650,13 @@ function renderMonthSummary(monthData) {
     paypayTotal += Number(nonCash.paypay || 0);
     pointTotal += Number(nonCash.point || 0);
     creditTotal += Number(nonCash.credit || 0);
+    feeTotal += fees.totalFee;
   });
 
-  const totalIncome =
+  const totalIncomeBeforeFee =
     cashIncomeTotal + paypayTotal + pointTotal + creditTotal;
+
+  const totalIncomeAfterFee = totalIncomeBeforeFee - feeTotal;
 
   document.getElementById("monthSavedDaysText").textContent = `${savedDays}天`;
 
@@ -626,7 +673,17 @@ function renderMonthSummary(monthData) {
     formatYen(creditTotal);
 
   document.getElementById("monthTotalIncomeText").textContent =
-    formatYen(totalIncome);
+    formatYen(totalIncomeBeforeFee);
+
+  const feeText = document.getElementById("monthFeeText");
+  if (feeText) {
+    feeText.textContent = formatYen(feeTotal);
+  }
+
+  const afterFeeText = document.getElementById("monthNetAfterFeeText");
+  if (afterFeeText) {
+    afterFeeText.textContent = formatYen(totalIncomeAfterFee);
+  }
 }
 
 async function openDay(day) {
@@ -1378,6 +1435,8 @@ function getDailyReportRows() {
     const point = Number(nonCash.point || 0);
     const credit = Number(nonCash.credit || 0);
     const totalIncome = cashIncome + paypay + point + credit;
+    const fees = calculateNonCashFees(nonCash);
+    const totalIncomeAfterFee = totalIncome - fees.totalFee;
 
     rows.push({
       day,
@@ -1395,6 +1454,8 @@ function getDailyReportRows() {
       point,
       credit,
       totalIncome,
+      feeTotal: fees.totalFee,
+      totalIncomeAfterFee,
       exchangeStatus: dayData.exchangeApplied ? "已执行" : "未执行"
     });
   }
@@ -1410,6 +1471,8 @@ function getMonthlyReportSummary(rows) {
     summary.point += row.point;
     summary.credit += row.credit;
     summary.totalIncome += row.totalIncome;
+    summary.feeTotal += row.feeTotal || 0;
+    summary.totalIncomeAfterFee += row.totalIncomeAfterFee ?? row.totalIncome;
     return summary;
   }, {
     savedDays: 0,
@@ -1417,7 +1480,9 @@ function getMonthlyReportSummary(rows) {
     paypay: 0,
     point: 0,
     credit: 0,
-    totalIncome: 0
+    totalIncome: 0,
+    feeTotal: 0,
+    totalIncomeAfterFee: 0
   });
 }
 
@@ -1448,7 +1513,9 @@ function exportMonthlyCsvReport() {
   lines.push(["PayPay合计", summary.paypay].map(csvEscape).join(","));
   lines.push(["积分合计", summary.point].map(csvEscape).join(","));
   lines.push(["信用卡合计", summary.credit].map(csvEscape).join(","));
-  lines.push(["总收入", summary.totalIncome].map(csvEscape).join(","));
+  lines.push(["手续费前总收入", summary.totalIncome].map(csvEscape).join(","));
+  lines.push(["手续费合计", summary.feeTotal].map(csvEscape).join(","));
+  lines.push(["手续费后总收入", summary.totalIncomeAfterFee].map(csvEscape).join(","));
   lines.push("");
 
   lines.push([
@@ -1457,7 +1524,9 @@ function exportMonthlyCsvReport() {
     "PayPay",
     "积分",
     "信用卡",
-    "当日总收入",
+    "手续费前当日总收入",
+    "手续费",
+    "手续费后当日总收入",
     "兑换状态",
     "10000円数量",
     "5000円数量",
@@ -1477,6 +1546,8 @@ function exportMonthlyCsvReport() {
       row.point,
       row.credit,
       row.totalIncome,
+      row.feeTotal,
+      row.totalIncomeAfterFee,
       row.exchangeStatus,
       row.cash10000,
       row.cash5000,
@@ -1533,7 +1604,9 @@ function printMonthlyReport() {
       <td class="num">${formatYen(row.paypay)}</td>
       <td class="num">${formatYen(row.point)}</td>
       <td class="num">${formatYen(row.credit)}</td>
-      <td class="num strong">${formatYen(row.totalIncome)}</td>
+      <td class="num">${formatYen(row.totalIncome)}</td>
+      <td class="num">${formatYen(row.feeTotal || 0)}</td>
+      <td class="num strong">${formatYen(row.totalIncomeAfterFee ?? row.totalIncome)}</td>
       <td>${escapeHtml(row.exchangeStatus)}</td>
     </tr>
   `).join("");
@@ -1663,8 +1736,16 @@ function printMonthlyReport() {
       <div class="value">${formatYen(summary.credit)}</div>
     </div>
     <div class="box">
-      <div class="label">总收入</div>
+      <div class="label">手续费前总收入</div>
       <div class="value">${formatYen(summary.totalIncome)}</div>
+    </div>
+    <div class="box">
+      <div class="label">手续费合计</div>
+      <div class="value">${formatYen(summary.feeTotal)}</div>
+    </div>
+    <div class="box">
+      <div class="label">手续费后总收入</div>
+      <div class="value">${formatYen(summary.totalIncomeAfterFee)}</div>
     </div>
   </div>
 
@@ -1677,7 +1758,9 @@ function printMonthlyReport() {
         <th>PayPay</th>
         <th>积分</th>
         <th>信用卡</th>
-        <th>当日总收入</th>
+        <th>手续费前收入</th>
+        <th>手续费</th>
+        <th>手续费后收入</th>
         <th>兑换状态</th>
       </tr>
     </thead>
@@ -1737,7 +1820,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "3.1-inactivity-auto-logout",
+    version: "3.2-global-settings-fee-10min-logout",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -1838,6 +1921,62 @@ async function importBackupFile(event) {
   reader.readAsText(file);
 }
 
+
+
+/* =========================
+   全局设置：手续费
+========================= */
+
+function renderFeeSettingsInputs() {
+  const paypayInput = document.getElementById("paypayFeeInput");
+  const pointInput = document.getElementById("pointFeeInput");
+  const creditInput = document.getElementById("creditFeeInput");
+
+  if (paypayInput) paypayInput.value = currentFeeSettings.paypay;
+  if (pointInput) pointInput.value = currentFeeSettings.point;
+  if (creditInput) creditInput.value = currentFeeSettings.credit;
+}
+
+function getFeeSettingsInputData() {
+  return {
+    paypay: Number(document.getElementById("paypayFeeInput")?.value || 0),
+    point: Number(document.getElementById("pointFeeInput")?.value || 0),
+    credit: Number(document.getElementById("creditFeeInput")?.value || 0)
+  };
+}
+
+async function saveGlobalSettings() {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  if (!currentStoreId) {
+    alert("未读取到默认店铺。");
+    return;
+  }
+
+  const feeSettings = getFeeSettingsInputData();
+
+  const { error } = await supabaseClient
+    .from("stores")
+    .update({
+      paypay_fee_rate: feeSettings.paypay,
+      point_fee_rate: feeSettings.point,
+      credit_fee_rate: feeSettings.credit
+    })
+    .eq("id", currentStoreId);
+
+  if (error) {
+    alert("手续费设置保存失败：" + error.message);
+    return;
+  }
+
+  currentFeeSettings = feeSettings;
+  renderMonthSummary(currentMonthData);
+
+  alert("手续费设置已保存到云端。");
+}
 
 /* =========================
    兑换日志 / 撤销兑换
@@ -2125,8 +2264,10 @@ async function showReservePage() {
   document.getElementById("reservePage").classList.add("active");
   scrollToTop();
 
+  await loadDefaultStore();
   await loadReserveDataFromSupabase();
 
+  renderFeeSettingsInputs();
   renderReserveInputs();
   renderReserveSummary();
   renderReserveAlerts();

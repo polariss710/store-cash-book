@@ -9,7 +9,7 @@
 
   <title>店铺记账系统</title>
 
-  <link rel="stylesheet" href="style.css?v=31" />
+  <link rel="stylesheet" href="style.css?v=32" />
 </head>
 <body>
 
@@ -100,7 +100,7 @@
             <button class="sub-btn" type="button" onclick="printMonthlyReport()">打印月度报表</button>
           </div>
 
-          <button class="reserve-btn admin-only" type="button" onclick="showReservePage()">备用金管理</button>
+          <button class="reserve-btn admin-only" type="button" onclick="showReservePage()">全局设置</button>
         </div>
 
         <div class="card result-card">
@@ -131,9 +131,19 @@
             <strong id="monthCreditText">0円</strong>
           </div>
 
-          <div class="result-row total-result-row">
-            <span>本月总收入</span>
+          <div class="result-row">
+            <span>手续费前总收入</span>
             <strong id="monthTotalIncomeText">0円</strong>
+          </div>
+
+          <div class="result-row">
+            <span>手续费合计</span>
+            <strong id="monthFeeText">0円</strong>
+          </div>
+
+          <div class="result-row total-result-row">
+            <span>手续费后总收入</span>
+            <strong id="monthNetAfterFeeText">0円</strong>
           </div>
         </div>
 
@@ -225,6 +235,42 @@
       <section id="reservePage" class="page">
         <div class="card">
           <button class="back-btn" type="button" onclick="showMonthPage()">← 返回月份</button>
+          <h2>全局设置</h2>
+
+          <div class="standard-box">
+            <strong>设置项目：</strong><br />
+            <span>当前包含：手续费设置、备用金管理。</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>现金以外收入手续费设置</h2>
+          <div class="standard-box">
+            <span>请输入手续费率。例如 3.24 表示 3.24%。现金收入不计算手续费。</span>
+          </div>
+
+          <div class="form-row">
+            <label for="paypayFeeInput">PayPay</label>
+            <input id="paypayFeeInput" type="number" step="0.01" min="0" placeholder="0" />
+            <span class="fee-unit">%</span>
+          </div>
+
+          <div class="form-row">
+            <label for="pointFeeInput">积分</label>
+            <input id="pointFeeInput" type="number" step="0.01" min="0" placeholder="0" />
+            <span class="fee-unit">%</span>
+          </div>
+
+          <div class="form-row">
+            <label for="creditFeeInput">信用卡</label>
+            <input id="creditFeeInput" type="number" step="0.01" min="0" placeholder="0" />
+            <span class="fee-unit">%</span>
+          </div>
+
+          <button class="save-btn admin-only" type="button" onclick="saveGlobalSettings()">保存手续费设置</button>
+        </div>
+
+        <div class="card">
           <h2>备用金管理</h2>
 
           <div class="standard-box">
@@ -283,6 +329,6 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=31"></script>
+  <script src="app.js?v=32"></script>
 </body>
 </html>
