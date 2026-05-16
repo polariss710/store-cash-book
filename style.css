@@ -522,3 +522,8 @@ button:disabled {
     font-size: 14px;
   }
 }
+
+
+.danger-header-btn {
+  background: #7f1d1d;
+}

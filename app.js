@@ -3,6 +3,11 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_HTCFg_w3vmdNqfG2ZE46-A_6KXpxAnz
 
 let supabaseClient = null;
 
+const INACTIVITY_LIMIT_MS = 15 * 60 * 1000;
+const activityEvents = ["click", "input", "keydown", "touchstart", "scroll"];
+let inactivityTimer = null;
+let isAutoSigningOut = false;
+
 const denominations = [10000, 5000, 1000, 500, 100, 50, 10];
 
 const nonCashItems = [
@@ -107,8 +112,10 @@ async function login() {
 }
 
 async function logout() {
+  stopInactivityWatcher();
+
   if (supabaseClient) {
-    await supabaseClient.auth.signOut();
+    await supabaseClient.auth.signOut({ scope: "local" });
   }
 
   currentUser = null;
@@ -118,6 +125,91 @@ async function logout() {
   document.getElementById("appPage").classList.remove("active");
   document.getElementById("loginPage").classList.add("active");
   document.getElementById("loginPassword").value = "";
+}
+
+async function confirmAndGlobalLogout() {
+  const ok = confirm(
+    "确定要退出所有设备吗？\n\n" +
+    "此操作会让当前账号在其他电脑、iPad、手机上也需要重新登录。"
+  );
+
+  if (!ok) return;
+
+  stopInactivityWatcher();
+
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut({ scope: "global" });
+  }
+
+  currentUser = null;
+  currentStoreId = null;
+  currentMonthData = {};
+
+  document.getElementById("appPage").classList.remove("active");
+  document.getElementById("loginPage").classList.add("active");
+  document.getElementById("loginPassword").value = "";
+
+  alert("已退出所有设备。");
+}
+
+async function autoLogoutByInactivity() {
+  if (!currentUser || isAutoSigningOut) {
+    return;
+  }
+
+  isAutoSigningOut = true;
+  stopInactivityWatcher();
+
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut({ scope: "local" });
+  }
+
+  currentUser = null;
+  currentStoreId = null;
+  currentMonthData = {};
+
+  document.getElementById("appPage").classList.remove("active");
+  document.getElementById("loginPage").classList.add("active");
+  document.getElementById("loginPassword").value = "";
+
+  alert("15分钟无操作，已自动退出。请重新登录。");
+
+  isAutoSigningOut = false;
+}
+
+function resetInactivityTimer() {
+  if (!currentUser) {
+    return;
+  }
+
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+  }
+
+  inactivityTimer = setTimeout(() => {
+    autoLogoutByInactivity();
+  }, INACTIVITY_LIMIT_MS);
+}
+
+function startInactivityWatcher() {
+  stopInactivityWatcher();
+
+  activityEvents.forEach(eventName => {
+    window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+  });
+
+  resetInactivityTimer();
+}
+
+function stopInactivityWatcher() {
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = null;
+  }
+
+  activityEvents.forEach(eventName => {
+    window.removeEventListener(eventName, resetInactivityTimer);
+  });
 }
 
 async function restoreLogin() {
@@ -149,7 +241,7 @@ async function loadCurrentUserFromSupabase(user) {
       "请确认 profiles 表中已经有该用户，并设置了 role。"
     );
 
-    await supabaseClient.auth.signOut();
+    await supabaseClient.auth.signOut({ scope: "local" });
     showLogin();
     return;
   }
@@ -192,6 +284,7 @@ function showApp() {
   document.getElementById("currentUserText").textContent =
     `${currentUser.username}（${currentUser.role}）`;
 
+  startInactivityWatcher();
   applyPermissions();
 
   const today = new Date();
@@ -1644,7 +1737,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "3.0-monthly-report-export",
+    version: "3.1-inactivity-auto-logout",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

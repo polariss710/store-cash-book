@@ -9,7 +9,7 @@
 
   <title>店铺记账系统</title>
 
-  <link rel="stylesheet" href="style.css?v=30" />
+  <link rel="stylesheet" href="style.css?v=31" />
 </head>
 <body>
 
@@ -47,6 +47,7 @@
       <div class="user-bar">
         <span id="currentUserText">未登录</span>
         <button class="small-header-btn" type="button" onclick="logout()">退出登录</button>
+        <button class="small-header-btn danger-header-btn" type="button" onclick="confirmAndGlobalLogout()">退出所有设备</button>
       </div>
     </header>
 
@@ -282,6 +283,6 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=31"></script>
 </body>
 </html>
