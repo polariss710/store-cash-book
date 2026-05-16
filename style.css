@@ -403,7 +403,7 @@ button:disabled {
 
 .reserve-row {
   display: grid;
-  grid-template-columns: 80px 1fr 1fr;
+  grid-template-columns: 80px 1fr 44px 44px 1fr 44px 44px;
   gap: 8px;
   align-items: center;
   margin-bottom: 12px;
@@ -420,7 +420,7 @@ button:disabled {
 
 .reserve-header {
   display: grid;
-  grid-template-columns: 80px 1fr 1fr;
+  grid-template-columns: 80px 1fr 44px 44px 1fr 44px 44px;
   gap: 8px;
   margin-bottom: 8px;
   font-size: 13px;
@@ -475,4 +475,50 @@ button:disabled {
 
 .delete-day-btn:hover {
   opacity: 0.88;
+}
+
+
+.reserve-small-btn {
+  padding: 10px;
+  background: #e5e7eb;
+  color: #111827;
+  font-weight: 700;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.undo-exchange-btn {
+  width: 100%;
+  background: #92400e;
+  color: white;
+  font-weight: 700;
+  margin-top: 12px;
+}
+
+.undo-exchange-btn:hover,
+.reserve-small-btn:hover {
+  opacity: 0.88;
+}
+
+.undo-exchange-btn.hidden-by-state {
+  display: none !important;
+}
+
+@media (max-width: 520px) {
+  .reserve-header {
+    grid-template-columns: 70px 1fr 38px 38px 1fr 38px 38px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .reserve-row {
+    grid-template-columns: 70px 1fr 38px 38px 1fr 38px 38px;
+    gap: 6px;
+  }
+
+  .reserve-small-btn {
+    padding: 9px 6px;
+    font-size: 14px;
+  }
 }

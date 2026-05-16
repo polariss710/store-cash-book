@@ -9,7 +9,7 @@
 
   <title>店铺记账系统</title>
 
-  <link rel="stylesheet" href="style.css?v=28" />
+  <link rel="stylesheet" href="style.css?v=29" />
 </head>
 <body>
 
@@ -208,6 +208,7 @@
           <h2>执行兑换</h2>
           <div id="exchangeActionArea" class="diff-area">请先确认上方兑换建议。</div>
           <button class="execute-btn" type="button" onclick="confirmAndApplyExchange()">确认执行兑换并更新备用金</button>
+          <button id="undoExchangeBtn" class="undo-exchange-btn" type="button" onclick="confirmAndUndoExchange()">撤销当天兑换</button>
         </div>
 
         <button class="save-btn write-only" type="button" onclick="saveCurrentDay()">保存当天数据</button>
@@ -276,6 +277,6 @@
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=28"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>

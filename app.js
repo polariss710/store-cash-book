@@ -265,6 +265,17 @@ function formatYen(value) {
   return `${Number(value || 0).toLocaleString()}円`;
 }
 
+function formatDateTimeText(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString("ja-JP");
+}
+
 function formatDateKey(year, month, day) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
@@ -1048,8 +1059,25 @@ function isExchangeAlreadyApplied() {
 function renderExchangeActionStatus() {
   const area = document.getElementById("exchangeActionArea");
   const button = document.querySelector("#dayPage .execute-btn");
+  const undoButton = document.getElementById("undoExchangeBtn");
 
   if (!area || !button) return;
+
+  function hideUndo() {
+    if (undoButton) {
+      undoButton.classList.add("hidden-by-state");
+      undoButton.disabled = true;
+    }
+  }
+
+  function showUndo() {
+    if (undoButton) {
+      undoButton.classList.remove("hidden-by-state");
+      undoButton.disabled = false;
+    }
+  }
+
+  hideUndo();
 
   if (!canAdmin()) {
     area.innerHTML = `<div class="diff-minus">当前用户没有执行兑换权限。</div>`;
@@ -1063,19 +1091,21 @@ function renderExchangeActionStatus() {
   const hasExchange =
     giveToReserve.length > 0 || takeFromReserve.length > 0;
 
-  if (!hasExchange) {
-    area.innerHTML = `<div class="exchange-applied">无需执行兑换。</div>`;
-    button.disabled = true;
-    return;
-  }
-
   if (isExchangeAlreadyApplied()) {
     const dayData = getCurrentDayData();
 
     area.innerHTML =
       `<div class="exchange-applied">本日兑换已执行。</div>` +
-      `<div class="diff-normal">执行时间：${dayData.exchangeAppliedAt || "-"}</div>`;
+      `<div class="diff-normal">执行时间：${formatDateTimeText(dayData.exchangeAppliedAt)}</div>` +
+      `<div class="diff-normal">如本日兑换执行错误，可点击下方按钮撤销。撤销会反向恢复备用金库存。</div>`;
 
+    button.disabled = true;
+    showUndo();
+    return;
+  }
+
+  if (!hasExchange) {
+    area.innerHTML = `<div class="exchange-applied">无需执行兑换。</div>`;
     button.disabled = true;
     return;
   }
@@ -1097,7 +1127,6 @@ function renderExchangeActionStatus() {
 
   button.disabled = false;
 }
-
 function checkReserveShortageForCurrentPlan() {
   const reserveData = getReserveData();
   const takeFromReserve = currentExchangePlan.takeFromReserve || [];
@@ -1215,11 +1244,17 @@ async function applyExchangeToReserve() {
     const savedDay = await upsertDayDataToSupabase(currentDay, dayData);
     currentMonthData[currentDay] = savedDay;
 
+    await createExchangeLogForCurrentDay(
+      savedDay.id,
+      giveToReserve,
+      takeFromReserve
+    );
+
     renderMonthSummary(currentMonthData);
     calculateCurrentDay();
     renderExchangeActionStatus();
 
-    alert("备用金库存和每日数据已保存到云端。");
+    alert("备用金库存、每日数据和兑换日志已保存到云端。");
   } catch (error) {
     alert("执行兑换后的云端保存失败：" + error.message);
   }
@@ -1238,7 +1273,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "2.8-supabase-daily-reserve-cloud",
+    version: "2.9-supabase-daily-reserve-exchange-log-undo",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -1337,6 +1372,175 @@ async function importBackupFile(event) {
   };
 
   reader.readAsText(file);
+}
+
+
+/* =========================
+   兑换日志 / 撤销兑换
+========================= */
+
+async function createExchangeLogForCurrentDay(dailyRecordId, giveToReserve, takeFromReserve) {
+  if (!currentStoreId || !currentDay) {
+    throw new Error("店铺或日期未选择。");
+  }
+
+  const { error } = await supabaseClient
+    .from("exchange_logs")
+    .insert({
+      store_id: currentStoreId,
+      daily_record_id: dailyRecordId || null,
+      record_date: formatDateKey(currentYear, currentMonth, currentDay),
+      give_to_reserve: giveToReserve || [],
+      take_from_reserve: takeFromReserve || [],
+      created_by: currentUser?.id || null
+    });
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function getLatestExchangeLogForCurrentDay() {
+  if (!currentStoreId || !currentDay) {
+    return null;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("exchange_logs")
+    .select("*")
+    .eq("store_id", currentStoreId)
+    .eq("record_date", formatDateKey(currentYear, currentMonth, currentDay))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+function applyReverseExchangeToReserveData(reserveData, giveToReserve, takeFromReserve) {
+  const updated = cloneReserveData(reserveData);
+
+  // 原执行时：交给备用金 = 备用金增加；撤销时反向减少
+  (giveToReserve || []).forEach(item => {
+    updated[item.denom].count -= Number(item.count || 0);
+  });
+
+  // 原执行时：从备用金取出 = 备用金减少；撤销时反向增加
+  (takeFromReserve || []).forEach(item => {
+    updated[item.denom].count += Number(item.count || 0);
+  });
+
+  return updated;
+}
+
+async function confirmAndUndoExchange() {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  if (!currentDay) {
+    alert("请先选择日期。");
+    return;
+  }
+
+  if (!isExchangeAlreadyApplied()) {
+    alert("本日尚未执行兑换，无需撤销。");
+    renderExchangeActionStatus();
+    return;
+  }
+
+  let log = null;
+
+  try {
+    log = await getLatestExchangeLogForCurrentDay();
+  } catch (error) {
+    alert("读取兑换日志失败：" + error.message);
+    return;
+  }
+
+  if (!log) {
+    alert(
+      "没有找到本日兑换日志，无法自动撤销。\n\n" +
+      "可能原因：该兑换是在旧版本执行的，没有保存兑换明细。"
+    );
+    return;
+  }
+
+  const giveToReserve = log.give_to_reserve || [];
+  const takeFromReserve = log.take_from_reserve || [];
+
+  const giveText = giveToReserve.length
+    ? giveToReserve.map(item => `${item.denom}円 × ${item.count}`).join("\n")
+    : "无";
+
+  const takeText = takeFromReserve.length
+    ? takeFromReserve.map(item => `${item.denom}円 × ${item.count}`).join("\n")
+    : "无";
+
+  const ok = confirm(
+    `确定要撤销本日兑换吗？\n\n` +
+    `原本交给备用金：\n${giveText}\n\n` +
+    `原本从备用金取出：\n${takeText}\n\n` +
+    `撤销后系统会反向恢复备用金，并允许本日重新执行兑换。`
+  );
+
+  if (!ok) return;
+
+  try {
+    await loadReserveDataFromSupabase();
+
+    const currentReserve = getReserveData();
+    const reversedReserve = applyReverseExchangeToReserveData(
+      currentReserve,
+      giveToReserve,
+      takeFromReserve
+    );
+
+    for (const denom of denominations) {
+      if (reversedReserve[denom].count < 0) {
+        throw new Error(`${denom}円 撤销后库存会小于 0，请先确认备用金实际库存。`);
+      }
+    }
+
+    await saveReserveDataToSupabase(reversedReserve);
+
+    const dayData = currentMonthData[currentDay] || {
+      date: formatDateKey(currentYear, currentMonth, currentDay),
+      cash: getCurrentCashInput(),
+      nonCash: getCurrentNonCashInput()
+    };
+
+    dayData.exchangeApplied = false;
+    dayData.exchangeAppliedAt = null;
+
+    const savedDay = await upsertDayDataToSupabase(currentDay, dayData);
+    currentMonthData[currentDay] = savedDay;
+
+    const { error: deleteLogError } = await supabaseClient
+      .from("exchange_logs")
+      .delete()
+      .eq("id", log.id);
+
+    if (deleteLogError) {
+      alert(
+        "兑换已撤销，但删除兑换日志失败：\n" +
+        deleteLogError.message +
+        "\n\n请到 Supabase exchange_logs 手动确认。"
+      );
+    }
+
+    calculateCurrentDay();
+    renderExchangeActionStatus();
+
+    alert("本日兑换已撤销，备用金已反向恢复。");
+  } catch (error) {
+    alert("撤销兑换失败：" + error.message);
+  }
 }
 
 /* =========================
@@ -1476,7 +1680,11 @@ function renderReserveInputs() {
   header.innerHTML = `
     <div>面额</div>
     <div>当前库存</div>
+    <div>-</div>
+    <div>+</div>
     <div>目标库存</div>
+    <div>-</div>
+    <div>+</div>
   `;
   area.appendChild(header);
 
@@ -1502,9 +1710,53 @@ function renderReserveInputs() {
     countInput.addEventListener("input", renderReserveLiveInfoFromInputs);
     targetInput.addEventListener("input", renderReserveLiveInfoFromInputs);
 
+    const countMinusBtn = document.createElement("button");
+    countMinusBtn.type = "button";
+    countMinusBtn.className = "reserve-small-btn";
+    countMinusBtn.textContent = "-";
+    countMinusBtn.addEventListener("click", () => {
+      const value = Number(countInput.value || 0);
+      countInput.value = Math.max(0, value - 1);
+      renderReserveLiveInfoFromInputs();
+    });
+
+    const countPlusBtn = document.createElement("button");
+    countPlusBtn.type = "button";
+    countPlusBtn.className = "reserve-small-btn";
+    countPlusBtn.textContent = "+";
+    countPlusBtn.addEventListener("click", () => {
+      const value = Number(countInput.value || 0);
+      countInput.value = value + 1;
+      renderReserveLiveInfoFromInputs();
+    });
+
+    const targetMinusBtn = document.createElement("button");
+    targetMinusBtn.type = "button";
+    targetMinusBtn.className = "reserve-small-btn";
+    targetMinusBtn.textContent = "-";
+    targetMinusBtn.addEventListener("click", () => {
+      const value = Number(targetInput.value || 0);
+      targetInput.value = Math.max(0, value - 1);
+      renderReserveLiveInfoFromInputs();
+    });
+
+    const targetPlusBtn = document.createElement("button");
+    targetPlusBtn.type = "button";
+    targetPlusBtn.className = "reserve-small-btn";
+    targetPlusBtn.textContent = "+";
+    targetPlusBtn.addEventListener("click", () => {
+      const value = Number(targetInput.value || 0);
+      targetInput.value = value + 1;
+      renderReserveLiveInfoFromInputs();
+    });
+
     row.appendChild(label);
     row.appendChild(countInput);
+    row.appendChild(countMinusBtn);
+    row.appendChild(countPlusBtn);
     row.appendChild(targetInput);
+    row.appendChild(targetMinusBtn);
+    row.appendChild(targetPlusBtn);
 
     area.appendChild(row);
   });
