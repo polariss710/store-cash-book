@@ -9,7 +9,7 @@
 
   <title>店铺记账系统</title>
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20" />
 </head>
 <body>
 
@@ -17,11 +17,11 @@
   <section id="loginPage" class="login-page active">
     <div class="login-card">
       <h1>店铺记账系统</h1>
-      <p>请登录后使用</p>
+      <p>Supabase 云端登录测试版</p>
 
       <div class="form-row vertical">
-        <label for="loginUsername">用户名</label>
-        <input id="loginUsername" type="text" autocomplete="username" />
+        <label for="loginEmail">邮箱</label>
+        <input id="loginEmail" type="email" autocomplete="username" />
       </div>
 
       <div class="form-row vertical">
@@ -32,7 +32,7 @@
       <button class="primary-btn" type="button" onclick="login()">登录</button>
 
       <div class="login-hint">
-        初始管理员账号：admin / admin123
+        使用 Supabase Auth 中创建的邮箱和密码登录
       </div>
     </div>
   </section>
@@ -46,7 +46,6 @@
 
       <div class="user-bar">
         <span id="currentUserText">未登录</span>
-        <button class="small-header-btn admin-only" type="button" onclick="showUserPage()">用户管理</button>
         <button class="small-header-btn" type="button" onclick="logout()">退出登录</button>
       </div>
     </header>
@@ -273,50 +272,10 @@
         </div>
       </section>
 
-      <!-- 用户管理页面 -->
-      <section id="userPage" class="page">
-        <div class="card">
-          <button class="back-btn" type="button" onclick="showMonthPage()">← 返回月份</button>
-          <h2>用户管理</h2>
-          <div class="standard-box">
-            <span>本地简易权限管理。用户信息保存在当前浏览器 localStorage 中。</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>新增用户</h2>
-
-          <div class="form-row">
-            <label>用户名</label>
-            <input id="newUsername" type="text" />
-          </div>
-
-          <div class="form-row">
-            <label>密码</label>
-            <input id="newPassword" type="password" />
-          </div>
-
-          <div class="form-row">
-            <label>角色</label>
-            <select id="newRole">
-              <option value="staff">staff</option>
-              <option value="viewer">viewer</option>
-              <option value="admin">admin</option>
-            </select>
-          </div>
-
-          <button class="primary-btn" type="button" onclick="addUser()">新增用户</button>
-        </div>
-
-        <div class="card">
-          <h2>用户列表</h2>
-          <div id="userListArea"></div>
-        </div>
-      </section>
-
     </main>
   </section>
 
-  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>

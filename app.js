@@ -1,3 +1,8 @@
+const SUPABASE_URL = "https://ahtgiwdzocerkonrjmdo.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_HTCFg_w3vmdNqfG2ZE46-A_6KXpxAnz";
+
+let supabaseClient = null;
+
 const denominations = [10000, 5000, 1000, 500, 100, 50, 10];
 
 const nonCashItems = [
@@ -29,8 +34,6 @@ const defaultReserveCash = {
 };
 
 const reserveStorageKey = "store-cash-book-reserve";
-const usersStorageKey = "store-cash-book-users";
-const currentUserStorageKey = "store-cash-book-current-user";
 
 let currentYear = 2026;
 let currentMonth = 5;
@@ -43,96 +46,112 @@ let currentExchangePlan = {
 };
 
 /* =========================
-   登录 / 用户 / 权限
+   Supabase 登录 / 权限
 ========================= */
 
-function initializeUsers() {
-  const saved = localStorage.getItem(usersStorageKey);
-
-  if (saved) return;
-
-  const defaultUsers = [
-    {
-      username: "admin",
-      password: "admin123",
-      role: "admin"
-    }
-  ];
-
-  localStorage.setItem(usersStorageKey, JSON.stringify(defaultUsers));
-}
-
-function getUsers() {
-  const saved = localStorage.getItem(usersStorageKey);
-
-  if (!saved) return [];
-
-  try {
-    return JSON.parse(saved);
-  } catch {
-    return [];
+function initializeSupabase() {
+  if (!window.supabase) {
+    alert("Supabase JS 没有加载成功。请检查网络。");
+    return false;
   }
+
+  if (
+    !SUPABASE_PUBLISHABLE_KEY ||
+    SUPABASE_PUBLISHABLE_KEY === "这里换成你的 sb_publishable key"
+  ) {
+    alert("请先在 app.js 中设置 SUPABASE_PUBLISHABLE_KEY。");
+    return false;
+  }
+
+  supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+  );
+
+  return true;
 }
 
-function setUsers(users) {
-  localStorage.setItem(usersStorageKey, JSON.stringify(users));
-}
-
-function login() {
-  const username = document.getElementById("loginUsername").value.trim();
-  const password = document.getElementById("loginPassword").value;
-
-  const users = getUsers();
-  const user = users.find(u => u.username === username && u.password === password);
-
-  if (!user) {
-    alert("用户名或密码错误。");
+async function login() {
+  if (!supabaseClient) {
+    alert("Supabase 尚未初始化。");
     return;
   }
 
-  currentUser = {
-    username: user.username,
-    role: user.role
-  };
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
 
-  localStorage.setItem(currentUserStorageKey, JSON.stringify(currentUser));
+  if (!email || !password) {
+    alert("请输入邮箱和密码。");
+    return;
+  }
 
-  showApp();
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    alert("登录失败：" + error.message);
+    return;
+  }
+
+  await loadCurrentUserFromSupabase(data.user);
 }
 
-function logout() {
-  localStorage.removeItem(currentUserStorageKey);
+async function logout() {
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut();
+  }
+
   currentUser = null;
 
   document.getElementById("appPage").classList.remove("active");
   document.getElementById("loginPage").classList.add("active");
-
   document.getElementById("loginPassword").value = "";
 }
 
-function restoreLogin() {
-  const saved = localStorage.getItem(currentUserStorageKey);
-
-  if (!saved) {
+async function restoreLogin() {
+  if (!supabaseClient) {
     showLogin();
     return;
   }
 
-  try {
-    const parsed = JSON.parse(saved);
-    const users = getUsers();
-    const exists = users.find(u => u.username === parsed.username && u.role === parsed.role);
+  const { data, error } = await supabaseClient.auth.getUser();
 
-    if (!exists) {
-      showLogin();
-      return;
-    }
-
-    currentUser = parsed;
-    showApp();
-  } catch {
+  if (error || !data.user) {
     showLogin();
+    return;
   }
+
+  await loadCurrentUserFromSupabase(data.user);
+}
+
+async function loadCurrentUserFromSupabase(user) {
+  const { data: profile, error } = await supabaseClient
+    .from("profiles")
+    .select("id, email, display_name, role")
+    .eq("id", user.id)
+    .single();
+
+  if (error || !profile) {
+    alert(
+      "登录成功，但读取用户权限失败。\n\n" +
+      "请确认 profiles 表中已经有该用户，并设置了 role。"
+    );
+
+    await supabaseClient.auth.signOut();
+    showLogin();
+    return;
+  }
+
+  currentUser = {
+    id: user.id,
+    email: user.email,
+    username: profile.display_name || profile.email || user.email,
+    role: profile.role
+  };
+
+  showApp();
 }
 
 function showLogin() {
@@ -180,159 +199,6 @@ function applyPermissions() {
   document.querySelectorAll(".write-only").forEach(el => {
     el.classList.toggle("hidden-by-permission", !canWrite());
   });
-}
-
-function showUserPage() {
-  if (!canAdmin()) {
-    alert("没有权限。");
-    return;
-  }
-
-  hideAllPages();
-  document.getElementById("userPage").classList.add("active");
-  renderUserList();
-}
-
-function addUser() {
-  if (!canAdmin()) return;
-
-  const username = document.getElementById("newUsername").value.trim();
-  const password = document.getElementById("newPassword").value;
-  const role = document.getElementById("newRole").value;
-
-  if (!username || !password) {
-    alert("请输入用户名和密码。");
-    return;
-  }
-
-  const users = getUsers();
-
-  if (users.some(u => u.username === username)) {
-    alert("该用户名已存在。");
-    return;
-  }
-
-  users.push({ username, password, role });
-  setUsers(users);
-
-  document.getElementById("newUsername").value = "";
-  document.getElementById("newPassword").value = "";
-  document.getElementById("newRole").value = "staff";
-
-  renderUserList();
-
-  alert("用户已新增。");
-}
-
-function renderUserList() {
-  const area = document.getElementById("userListArea");
-  area.innerHTML = "";
-
-  const users = getUsers();
-
-  users.forEach(user => {
-    const row = document.createElement("div");
-    row.className = "user-row";
-
-    const title = document.createElement("div");
-    title.className = "user-row-title";
-    title.textContent = `${user.username}（${user.role}）`;
-
-    const controls = document.createElement("div");
-    controls.className = "user-controls";
-
-    const roleSelect = document.createElement("select");
-    ["admin", "staff", "viewer"].forEach(role => {
-      const option = document.createElement("option");
-      option.value = role;
-      option.textContent = role;
-      if (user.role === role) option.selected = true;
-      roleSelect.appendChild(option);
-    });
-
-    const passwordInput = document.createElement("input");
-    passwordInput.type = "password";
-    passwordInput.placeholder = "新密码";
-
-    const updateBtn = document.createElement("button");
-    updateBtn.type = "button";
-    updateBtn.className = "user-action-btn";
-    updateBtn.textContent = "更新";
-    updateBtn.onclick = () => {
-      updateUser(user.username, roleSelect.value, passwordInput.value);
-    };
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "user-action-btn user-delete-btn";
-    deleteBtn.textContent = "删除";
-    deleteBtn.onclick = () => {
-      deleteUser(user.username);
-    };
-
-    controls.appendChild(roleSelect);
-    controls.appendChild(passwordInput);
-    controls.appendChild(updateBtn);
-    controls.appendChild(deleteBtn);
-
-    row.appendChild(title);
-    row.appendChild(controls);
-
-    area.appendChild(row);
-  });
-}
-
-function updateUser(username, role, newPassword) {
-  if (!canAdmin()) return;
-
-  const users = getUsers();
-  const user = users.find(u => u.username === username);
-
-  if (!user) return;
-
-  user.role = role;
-
-  if (newPassword) {
-    user.password = newPassword;
-  }
-
-  setUsers(users);
-
-  if (currentUser.username === username) {
-    currentUser.role = role;
-    localStorage.setItem(currentUserStorageKey, JSON.stringify(currentUser));
-    document.getElementById("currentUserText").textContent =
-      `${currentUser.username}（${currentUser.role}）`;
-    applyPermissions();
-  }
-
-  renderUserList();
-  alert("用户已更新。");
-}
-
-function deleteUser(username) {
-  if (!canAdmin()) return;
-
-  if (username === currentUser.username) {
-    alert("不能删除当前登录用户。");
-    return;
-  }
-
-  const users = getUsers();
-
-  if (users.length <= 1) {
-    alert("至少需要保留一个用户。");
-    return;
-  }
-
-  const ok = confirm(`确定删除用户 ${username} 吗？`);
-
-  if (!ok) return;
-
-  setUsers(users.filter(u => u.username !== username));
-  renderUserList();
-
-  alert("用户已删除。");
 }
 
 /* =========================
@@ -1169,7 +1035,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "1.9-default-cash-input",
+    version: "2.0-supabase-login-local-data",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -1723,7 +1589,13 @@ function renderReservePreview(container, giveToReserve, takeFromReserve) {
   container.appendChild(preview);
 }
 
-window.addEventListener("load", () => {
-  initializeUsers();
-  restoreLogin();
+window.addEventListener("load", async () => {
+  const ok = initializeSupabase();
+
+  if (!ok) {
+    showLogin();
+    return;
+  }
+
+  await restoreLogin();
 });
