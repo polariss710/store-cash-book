@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=43" />
+  <link rel="stylesheet" href="style.css?v=44" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=43" defer></script>
+  <script src="app.js?v=44" defer></script>
 </head>
 <body>
 
@@ -368,6 +368,12 @@
           <div id="reserveRebalanceArea" class="diff-area">暂无数据</div>
           <button class="execute-btn admin-only" type="button" onclick="confirmAndRebalanceReserve()">确认已整理备用金</button>
         </div>
+      </section>
+
+
+      <!-- 月度报表页面 -->
+      <section id="reportPage" class="page">
+        <div id="embeddedReportArea"></div>
       </section>
 
     </main>
