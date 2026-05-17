@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=53" />
+  <link rel="stylesheet" href="style.css?v=55" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=53" defer></script>
+  <script src="app.js?v=55" defer></script>
 </head>
 <body>
 
@@ -50,7 +50,7 @@
         使用管理员用户名和密码登录
       </div>
 
-      <div class="login-version">当前版本：v53</div>
+      <div class="login-version">当前版本：v55</div>
     </div>
   </section>
 
@@ -326,13 +326,8 @@
 
           <div class="standard-box">
             <span>
-              按当前月份统计人员工资。先选择录入日期，再在人员卡片中录入当日工资和交通费。
+              按当前月份统计人员工资。添加人员卡片后，在卡片内按日期逐日录入工资和交通费。
             </span>
-          </div>
-
-          <div class="form-row">
-            <label for="salaryInputDate">录入日期</label>
-            <input id="salaryInputDate" type="date" onchange="renderSalaryCards()" />
           </div>
 
           <div class="form-row">

@@ -52,6 +52,7 @@ let currentMonthData = {};
 
 let salaryStaffList = [];
 let salaryMonthRecords = {};
+let selectedSalaryStaffId = null;
 let currentReserveData = null;
 let isTargetMaintenanceEnabled = false;
 
@@ -1879,12 +1880,7 @@ async function printMonthlyReport() {
 ========================= */
 
 function getSalaryDateInputValue() {
-  const input = document.getElementById("salaryInputDate");
-  if (input && input.value) {
-    return input.value;
-  }
-
-  return formatDateKey(currentYear, currentMonth, 1);
+  return formatDateKey(currentYear, currentMonth, currentDay || 1);
 }
 
 function getSalaryRecordKey(staffId, dateText) {
@@ -1900,11 +1896,6 @@ async function showSalaryPage() {
   hideAllPages();
   document.getElementById("salaryPage").classList.add("active");
   scrollToTop();
-
-  const input = document.getElementById("salaryInputDate");
-  if (input && !input.value) {
-    input.value = formatDateKey(currentYear, currentMonth, currentDay || 1);
-  }
 
   await loadSalaryData();
   renderSalaryCards();
@@ -2004,6 +1995,8 @@ function renderSalaryCards() {
   area.innerHTML = "";
 
   if (salaryStaffList.length === 0) {
+    selectedSalaryStaffId = null;
+
     area.innerHTML = `
       <div class="card">
         <h2>人员卡片</h2>
@@ -2015,80 +2008,134 @@ function renderSalaryCards() {
     return;
   }
 
-  const dateText = getSalaryDateInputValue();
+  if (!selectedSalaryStaffId || !salaryStaffList.some(staff => staff.id === selectedSalaryStaffId)) {
+    selectedSalaryStaffId = salaryStaffList[0].id;
+  }
+
+  const tabs = document.createElement("div");
+  tabs.className = "salary-staff-tabs";
 
   salaryStaffList.forEach(staff => {
-    const summary = getStaffMonthlySalarySummary(staff.id);
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = `salary-staff-tab ${staff.id === selectedSalaryStaffId ? "active" : ""}`;
+    tab.textContent = staff.name;
+    tab.onclick = () => {
+      selectedSalaryStaffId = staff.id;
+      renderSalaryCards();
+    };
+    tabs.appendChild(tab);
+  });
+
+  area.appendChild(tabs);
+
+  const staff = salaryStaffList.find(item => item.id === selectedSalaryStaffId);
+
+  if (!staff) {
+    renderSalarySummary();
+    return;
+  }
+
+  const summary = getStaffMonthlySalarySummary(staff.id);
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+
+  const rows = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateText = formatDateKey(currentYear, currentMonth, day);
     const record = salaryMonthRecords[getSalaryRecordKey(staff.id, dateText)] || {};
 
-    const card = document.createElement("div");
-    card.className = "salary-staff-card";
-
-    card.innerHTML = `
-      <div class="salary-staff-header">
-        <div>
-          <div class="salary-staff-name">${escapeHtml(staff.name)}</div>
-          <div class="maintenance-note">录入日期：${escapeHtml(dateText)}</div>
-        </div>
-      </div>
-
-      <div class="salary-staff-summary">
-        <div class="salary-mini-box">
-          <div class="salary-mini-label">当月总工资</div>
-          <div class="salary-mini-value">${formatYen(summary.wageTotal)}</div>
-        </div>
-
-        <div class="salary-mini-box">
-          <div class="salary-mini-label">交通费</div>
-          <div class="salary-mini-value">${formatYen(summary.transportTotal)}</div>
-        </div>
-
-        <div class="salary-mini-box">
-          <div class="salary-mini-label">当月合计</div>
-          <div class="salary-mini-value">${formatYen(summary.total)}</div>
-        </div>
-      </div>
-
-      <div class="salary-daily-inputs">
-        <div class="form-row vertical">
-          <label>当天工资</label>
+    rows.push(`
+      <tr>
+        <td class="salary-month-date">${currentMonth}/${day}（${getJapaneseWeekday(currentYear, currentMonth, day)}）</td>
+        <td>
           <input
             type="number"
             min="0"
             value="${Number(record.wage_amount || 0)}"
-            data-salary-wage="${staff.id}"
+            data-salary-month-wage="${staff.id}"
+            data-salary-date="${dateText}"
           />
-        </div>
-
-        <div class="form-row vertical">
-          <label>当天交通费</label>
+        </td>
+        <td>
           <input
             type="number"
             min="0"
             value="${Number(record.transport_amount || 0)}"
-            data-salary-transport="${staff.id}"
+            data-salary-month-transport="${staff.id}"
+            data-salary-date="${dateText}"
           />
-        </div>
+        </td>
+        <td>
+          <input
+            type="text"
+            value="${escapeHtml(record.note || "")}"
+            data-salary-month-note="${staff.id}"
+            data-salary-date="${dateText}"
+            placeholder="可选"
+          />
+        </td>
+      </tr>
+    `);
+  }
+
+  const card = document.createElement("div");
+  card.className = "salary-staff-card";
+
+  card.innerHTML = `
+    <div class="salary-staff-header">
+      <div>
+        <div class="salary-staff-name">${escapeHtml(staff.name)}</div>
+        <div class="maintenance-note">${currentYear}年${currentMonth}月 工资明细</div>
+      </div>
+    </div>
+
+    <div class="salary-staff-summary">
+      <div class="salary-mini-box">
+        <div class="salary-mini-label">当月总工资</div>
+        <div class="salary-mini-value">${formatYen(summary.wageTotal)}</div>
       </div>
 
-      <div class="form-row vertical">
-        <label>备注</label>
-        <input
-          type="text"
-          value="${escapeHtml(record.note || "")}"
-          data-salary-note="${staff.id}"
-          placeholder="可选"
-        />
+      <div class="salary-mini-box">
+        <div class="salary-mini-label">交通费</div>
+        <div class="salary-mini-value">${formatYen(summary.transportTotal)}</div>
       </div>
 
-      <div class="salary-card-actions">
-        <button class="salary-save-btn" type="button" onclick="saveSalaryDailyRecord('${staff.id}')">保存该人员当天数据</button>
-        <button class="salary-delete-btn" type="button" onclick="deactivateSalaryStaff('${staff.id}')">删除人员卡片</button>
+      <div class="salary-mini-box">
+        <div class="salary-mini-label">当月合计</div>
+        <div class="salary-mini-value">${formatYen(summary.total)}</div>
       </div>
-    `;
+    </div>
 
-    area.appendChild(card);
-  });
+    <div class="salary-month-table-wrap">
+      <table class="salary-month-table">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>当天工资</th>
+            <th>当天交通费</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.join("")}
+          <tr class="salary-month-total-row">
+            <td>合计</td>
+            <td>${formatYen(summary.wageTotal)}</td>
+            <td>${formatYen(summary.transportTotal)}</td>
+            <td>${formatYen(summary.total)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="salary-card-actions salary-batch-actions">
+      <button class="salary-save-btn" type="button" onclick="saveSalaryMonthlyRecords('${staff.id}')">保存该人员本月数据</button>
+      <button class="salary-delete-btn" type="button" onclick="deactivateSalaryStaff('${staff.id}')">删除人员卡片</button>
+    </div>
+  `;
+
+  area.appendChild(card);
 
   renderSalarySummary();
 }
@@ -2130,6 +2177,12 @@ async function addSalaryStaff() {
   input.value = "";
 
   await loadSalaryData();
+
+  const addedStaff = [...salaryStaffList].reverse().find(staff => staff.name === name);
+  if (addedStaff) {
+    selectedSalaryStaffId = addedStaff.id;
+  }
+
   renderSalaryCards();
 }
 
@@ -2221,7 +2274,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "5.3-salary-settlement-page",
+    version: "5.5-salary-monthly-grid-tabs",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

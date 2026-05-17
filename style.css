@@ -1082,3 +1082,85 @@ input[data-reserve-target]:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+.salary-staff-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 12px;
+  margin-bottom: 12px;
+}
+
+.salary-staff-tab {
+  flex: 0 0 auto;
+  border: 1px solid #99f6e4;
+  background: #ecfeff;
+  color: #134e4a;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 800;
+  width: auto;
+}
+
+.salary-staff-tab.active {
+  background: #0f766e;
+  color: white;
+  border-color: #0f766e;
+}
+
+.salary-month-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.salary-month-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.salary-month-table th,
+.salary-month-table td {
+  border: 1px solid #d1d5db;
+  padding: 7px;
+  text-align: left;
+}
+
+.salary-month-table th {
+  background: #0f766e;
+  color: white;
+  font-weight: 800;
+}
+
+.salary-month-table tbody tr:nth-child(even) {
+  background: #f0fdfa;
+}
+
+.salary-month-table input {
+  width: 100%;
+  min-width: 86px;
+  padding: 8px;
+}
+
+.salary-month-date {
+  font-weight: 800;
+  color: #134e4a;
+  white-space: nowrap;
+}
+
+.salary-month-total-row {
+  background: #ccfbf1 !important;
+  font-weight: 800;
+}
+
+.salary-batch-actions {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .salary-month-table {
+    min-width: 720px;
+  }
+}
