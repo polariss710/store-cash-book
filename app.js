@@ -2299,9 +2299,13 @@ function printSalaryDocuments(html) {
   document.body.classList.add("salary-print-mode");
   window.print();
 
-  setTimeout(() => {
+  const cleanupSalaryPrintMode = () => {
     document.body.classList.remove("salary-print-mode");
-  }, 500);
+    window.removeEventListener("afterprint", cleanupSalaryPrintMode);
+  };
+
+  window.addEventListener("afterprint", cleanupSalaryPrintMode);
+  setTimeout(cleanupSalaryPrintMode, 3000);
 }
 
 function exportCurrentSalaryStaffPdf(staffId) {
@@ -2572,7 +2576,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "6.0-salary-pdf-white-background",
+    version: "6.1-fix-salary-print-background",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

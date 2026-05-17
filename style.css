@@ -1356,3 +1356,86 @@ input[data-reserve-target]:disabled {
     background: white !important;
   }
 }
+
+
+/* v61: 工资明细 PDF 打印专用白底修正 */
+@media print {
+  html,
+  body.salary-print-mode {
+    background: #ffffff !important;
+    background-image: none !important;
+  }
+
+  body.salary-print-mode,
+  body.salary-print-mode * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.salary-print-mode .login-page,
+  body.salary-print-mode .app-page,
+  body.salary-print-mode .app-main,
+  body.salary-print-mode #salaryPage,
+  body.salary-print-mode #salaryPrintArea,
+  body.salary-print-mode .salary-print-area,
+  body.salary-print-mode .salary-print-document {
+    background: #ffffff !important;
+    background-image: none !important;
+  }
+
+  body.salary-print-mode .app-page {
+    display: block !important;
+    min-height: auto !important;
+  }
+
+  body.salary-print-mode .app-main {
+    max-width: none !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.salary-print-mode #salaryPage {
+    display: block !important;
+    min-height: auto !important;
+  }
+
+  body.salary-print-mode #salaryPrintArea,
+  body.salary-print-mode .salary-print-area {
+    display: block !important;
+    min-height: auto !important;
+    padding: 10mm !important;
+  }
+
+  body.salary-print-mode .salary-print-document {
+    display: block !important;
+    min-height: auto !important;
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  body.salary-print-mode .salary-print-page-break {
+    page-break-after: always;
+    break-after: page;
+    height: 0 !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.salary-print-mode .salary-print-page-break:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  body.salary-print-mode::before,
+  body.salary-print-mode::after,
+  body.salary-print-mode .app-page::before,
+  body.salary-print-mode .app-page::after,
+  body.salary-print-mode .app-main::before,
+  body.salary-print-mode .app-main::after {
+    content: none !important;
+    display: none !important;
+    background: #ffffff !important;
+    background-image: none !important;
+  }
+}
