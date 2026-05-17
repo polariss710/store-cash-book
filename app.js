@@ -1654,7 +1654,7 @@ async function incrementMonthlyReportExportCountAndPrint(reportWindow, year, mon
 }
 
 
-async async function printMonthlyReport() {
+async function printMonthlyReport() {
   const rows = getDailyReportRows();
 
   if (rows.length === 0) {
