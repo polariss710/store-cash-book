@@ -2576,7 +2576,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "6.1-fix-salary-print-background",
+    version: "6.2-hide-salary-export-buttons-in-print",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

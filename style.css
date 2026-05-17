@@ -1439,3 +1439,16 @@ input[data-reserve-target]:disabled {
     background-image: none !important;
   }
 }
+
+
+/* v62: 工资明细 PDF 中隐藏导出按钮等操作控件 */
+@media print {
+  body.salary-print-mode .salary-export-all-btn,
+  body.salary-print-mode .salary-export-btn,
+  body.salary-print-mode .salary-save-btn,
+  body.salary-print-mode .salary-delete-btn,
+  body.salary-print-mode .salary-card-actions,
+  body.salary-print-mode .salary-staff-tabs {
+    display: none !important;
+  }
+}
