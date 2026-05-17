@@ -511,7 +511,7 @@ async function loadMonthDataFromSupabase(year, month) {
   const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
   const { data, error } = await supabaseClient
-    .from("shop_shop_daily_records")
+    .from("shop_daily_records")
     .select("*")
     .eq("store_id", currentStoreId)
     .gte("record_date", startDate)
@@ -537,7 +537,7 @@ async function upsertDayDataToSupabase(day, dayData) {
   const record = dayDataToRecord(day, dayData);
 
   const { data, error } = await supabaseClient
-    .from("shop_shop_daily_records")
+    .from("shop_daily_records")
     .upsert(record, {
       onConflict: "store_id,record_date"
     })
@@ -1152,7 +1152,7 @@ async function deleteCurrentDayData() {
   if (!ok) return;
 
   const { error } = await supabaseClient
-    .from("shop_shop_daily_records")
+    .from("shop_daily_records")
     .delete()
     .eq("store_id", currentStoreId)
     .eq("record_date", dateText);
@@ -1758,7 +1758,7 @@ async function getMonthlyReportExportCount(year, month) {
   }
 
   const { data, error } = await supabaseClient
-    .from("shop_shop_monthly_report_exports")
+    .from("shop_monthly_report_exports")
     .select("export_count")
     .eq("store_id", currentStoreId)
     .eq("report_year", year)
@@ -1782,7 +1782,7 @@ async function incrementMonthlyReportExportCount(year, month) {
   const nextCount = currentCount + 1;
 
   const { error } = await supabaseClient
-    .from("shop_shop_monthly_report_exports")
+    .from("shop_monthly_report_exports")
     .upsert({
       store_id: currentStoreId,
       report_year: year,
@@ -2018,7 +2018,7 @@ async function createExchangeLogForCurrentDay(dailyRecordId, giveToReserve, take
   }
 
   const { error } = await supabaseClient
-    .from("shop_shop_exchange_logs")
+    .from("shop_exchange_logs")
     .insert({
       store_id: currentStoreId,
       daily_record_id: dailyRecordId || null,
@@ -2039,7 +2039,7 @@ async function getLatestExchangeLogForCurrentDay() {
   }
 
   const { data, error } = await supabaseClient
-    .from("shop_shop_exchange_logs")
+    .from("shop_exchange_logs")
     .select("*")
     .eq("store_id", currentStoreId)
     .eq("record_date", formatDateKey(currentYear, currentMonth, currentDay))
@@ -2155,7 +2155,7 @@ async function confirmAndUndoExchange() {
     currentMonthData[currentDay] = savedDay;
 
     const { error: deleteLogError } = await supabaseClient
-      .from("shop_shop_exchange_logs")
+      .from("shop_exchange_logs")
       .delete()
       .eq("id", log.id);
 
@@ -2221,7 +2221,7 @@ async function loadReserveDataFromSupabase() {
   }
 
   const { data, error } = await supabaseClient
-    .from("shop_shop_reserve_cash")
+    .from("shop_reserve_cash")
     .select("denomination, count, target")
     .eq("store_id", currentStoreId)
     .order("denomination", { ascending: false });
@@ -2263,7 +2263,7 @@ async function saveReserveDataToSupabase(reserveData) {
   }));
 
   const { error } = await supabaseClient
-    .from("shop_shop_reserve_cash")
+    .from("shop_reserve_cash")
     .upsert(rows, {
       onConflict: "store_id,denomination"
     });
