@@ -562,6 +562,7 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
+  margin-top: 12px;
 }
 
 .init-reserve-btn {
@@ -623,4 +624,63 @@ input[data-reserve-target] {
 
 .danger-action-btn:hover {
   opacity: 0.88;
+}
+
+
+.maintenance-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  color: #134e4a;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.maintenance-toggle input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.maintenance-note {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+input[data-reserve-target]:disabled {
+  color: #6b7280;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  opacity: 1;
+}
+
+.reserve-small-btn:disabled {
+  color: #9ca3af;
+  background: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.reserve-header-target.locked {
+  color: #6b7280;
+}
+
+
+/* 备用金设置按钮间距优化 */
+.reserve-setting-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.reserve-setting-buttons .save-btn,
+.reserve-setting-buttons .init-reserve-btn {
+  margin-bottom: 0;
 }

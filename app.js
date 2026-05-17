@@ -50,6 +50,7 @@ let currentFeeSettings = {
 };
 let currentMonthData = {};
 let currentReserveData = null;
+let isTargetMaintenanceEnabled = false;
 
 let currentExchangePlan = {
   giveToReserve: [],
@@ -1820,7 +1821,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "3.8-move-backup-to-settings",
+    version: "3.9-target-stock-maintenance-lock",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -2269,13 +2270,49 @@ async function showReservePage() {
   await loadDefaultStore();
   await loadReserveDataFromSupabase();
 
+  isTargetMaintenanceEnabled = false;
   renderFeeSettingsInputs();
+  syncTargetMaintenanceCheckbox();
   renderReserveInputs();
   renderReserveSummary();
   renderReserveAlerts();
   renderReserveRebalancePlan();
   applyPermissions();
 }
+
+
+function syncTargetMaintenanceCheckbox() {
+  const checkbox = document.getElementById("targetMaintenanceCheckbox");
+  if (checkbox) {
+    checkbox.checked = isTargetMaintenanceEnabled;
+  }
+}
+
+function handleTargetMaintenanceToggle(checkbox) {
+  if (checkbox.checked) {
+    const ok = confirm(
+      "确定要开启目标库存数据维护吗？\n\n" +
+      "目标库存是备用金标准值，修改后会影响初始化、差额判断和备用金整理建议。"
+    );
+
+    if (!ok) {
+      checkbox.checked = false;
+      isTargetMaintenanceEnabled = false;
+      renderReserveInputs();
+      return;
+    }
+
+    isTargetMaintenanceEnabled = true;
+  } else {
+    isTargetMaintenanceEnabled = false;
+  }
+
+  renderReserveInputs();
+  renderReserveSummary();
+  renderReserveAlerts();
+  renderReserveRebalancePlan();
+}
+
 
 function renderReserveInputs() {
   const reserveData = getReserveData();
@@ -2289,9 +2326,9 @@ function renderReserveInputs() {
     <div class="reserve-header-current">当前库存</div>
     <div class="reserve-header-current">-</div>
     <div class="reserve-header-current">+</div>
-    <div class="reserve-header-target">目标库存</div>
-    <div class="reserve-header-target">-</div>
-    <div class="reserve-header-target">+</div>
+    <div class="reserve-header-target ${isTargetMaintenanceEnabled ? "" : "locked"}">目标库存</div>
+    <div class="reserve-header-target ${isTargetMaintenanceEnabled ? "" : "locked"}">-</div>
+    <div class="reserve-header-target ${isTargetMaintenanceEnabled ? "" : "locked"}">+</div>
   `;
   area.appendChild(header);
 
@@ -2313,6 +2350,7 @@ function renderReserveInputs() {
     targetInput.min = "0";
     targetInput.value = reserveData[denom].target;
     targetInput.dataset.reserveTarget = denom;
+    targetInput.disabled = !isTargetMaintenanceEnabled;
 
     countInput.addEventListener("input", renderReserveLiveInfoFromInputs);
     targetInput.addEventListener("input", renderReserveLiveInfoFromInputs);
@@ -2341,7 +2379,9 @@ function renderReserveInputs() {
     targetMinusBtn.type = "button";
     targetMinusBtn.className = "reserve-small-btn";
     targetMinusBtn.textContent = "-";
+    targetMinusBtn.disabled = !isTargetMaintenanceEnabled;
     targetMinusBtn.addEventListener("click", () => {
+      if (!isTargetMaintenanceEnabled) return;
       const value = Number(targetInput.value || 0);
       targetInput.value = Math.max(0, value - 1);
       renderReserveLiveInfoFromInputs();
@@ -2351,7 +2391,9 @@ function renderReserveInputs() {
     targetPlusBtn.type = "button";
     targetPlusBtn.className = "reserve-small-btn";
     targetPlusBtn.textContent = "+";
+    targetPlusBtn.disabled = !isTargetMaintenanceEnabled;
     targetPlusBtn.addEventListener("click", () => {
+      if (!isTargetMaintenanceEnabled) return;
       const value = Number(targetInput.value || 0);
       targetInput.value = value + 1;
       renderReserveLiveInfoFromInputs();

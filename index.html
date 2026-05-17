@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=38" />
+  <link rel="stylesheet" href="style.css?v=39" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=38" defer></script>
+  <script src="app.js?v=39" defer></script>
 </head>
 <body>
 
@@ -292,6 +292,20 @@
 
         <div class="card">
           <h2>备用金库存设置</h2>
+
+          <label class="maintenance-toggle">
+            <input
+              id="targetMaintenanceCheckbox"
+              type="checkbox"
+              onchange="handleTargetMaintenanceToggle(this)"
+            />
+            <span>数据维护：允许修改目标库存</span>
+          </label>
+
+          <div class="maintenance-note">
+            默认关闭。关闭时目标库存不能修改；打开时会弹出确认提示。
+          </div>
+
           <div id="reserveInputArea"></div>
 
           <div class="reserve-setting-buttons">
