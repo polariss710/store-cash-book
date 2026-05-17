@@ -1164,3 +1164,21 @@ input[data-reserve-target]:disabled {
     min-width: 720px;
   }
 }
+
+
+/* v56 登录界面宽度统一 */
+.login-card .form-row.vertical,
+.login-card .primary-btn,
+.login-card .login-hint,
+.login-card .login-version {
+  width: 100%;
+}
+
+.login-card input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.login-card .primary-btn {
+  margin-top: 16px;
+}

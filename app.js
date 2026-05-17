@@ -2274,7 +2274,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "5.5-salary-monthly-grid-tabs",
+    version: "5.6-login-width-and-readme",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
