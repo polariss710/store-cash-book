@@ -236,7 +236,7 @@ async function restoreLogin() {
 
 async function loadCurrentUserFromSupabase(user) {
   const { data: profile, error } = await supabaseClient
-    .from("profiles")
+    .from("shop_profiles")
     .select("id, email, username, display_name, role")
     .eq("id", user.id)
     .single();
@@ -244,7 +244,7 @@ async function loadCurrentUserFromSupabase(user) {
   if (error || !profile) {
     alert(
       "登录成功，但读取用户权限失败。\n\n" +
-      "请确认 profiles 表中已经有该用户，并设置了 role。"
+      "请确认 shop_profiles 表中已经有该用户，并设置了 role。"
     );
 
     await supabaseClient.auth.signOut({ scope: "local" });
@@ -265,14 +265,14 @@ async function loadCurrentUserFromSupabase(user) {
 
 async function loadDefaultStore() {
   const { data, error } = await supabaseClient
-    .from("stores")
+    .from("shop_stores")
     .select("id, store_name, paypay_fee_rate, point_fee_rate, credit_fee_rate")
     .eq("store_name", "默认店铺")
     .single();
 
   if (error || !data) {
     alert(
-      "读取默认店铺失败。请确认 stores 表中存在「默认店铺」，并且已经执行 v32 手续费字段 SQL。"
+      "读取默认店铺失败。请确认 shop_stores 表中存在「默认店铺」，并且已经执行 v32 手续费字段 SQL。"
     );
     return;
   }
@@ -511,7 +511,7 @@ async function loadMonthDataFromSupabase(year, month) {
   const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
   const { data, error } = await supabaseClient
-    .from("daily_records")
+    .from("shop_shop_daily_records")
     .select("*")
     .eq("store_id", currentStoreId)
     .gte("record_date", startDate)
@@ -537,7 +537,7 @@ async function upsertDayDataToSupabase(day, dayData) {
   const record = dayDataToRecord(day, dayData);
 
   const { data, error } = await supabaseClient
-    .from("daily_records")
+    .from("shop_shop_daily_records")
     .upsert(record, {
       onConflict: "store_id,record_date"
     })
@@ -1152,7 +1152,7 @@ async function deleteCurrentDayData() {
   if (!ok) return;
 
   const { error } = await supabaseClient
-    .from("daily_records")
+    .from("shop_shop_daily_records")
     .delete()
     .eq("store_id", currentStoreId)
     .eq("record_date", dateText);
@@ -1758,7 +1758,7 @@ async function getMonthlyReportExportCount(year, month) {
   }
 
   const { data, error } = await supabaseClient
-    .from("monthly_report_exports")
+    .from("shop_shop_monthly_report_exports")
     .select("export_count")
     .eq("store_id", currentStoreId)
     .eq("report_year", year)
@@ -1782,7 +1782,7 @@ async function incrementMonthlyReportExportCount(year, month) {
   const nextCount = currentCount + 1;
 
   const { error } = await supabaseClient
-    .from("monthly_report_exports")
+    .from("shop_shop_monthly_report_exports")
     .upsert({
       store_id: currentStoreId,
       report_year: year,
@@ -1848,7 +1848,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.6-fix-embedded-report-render",
+    version: "4.7-shop-table-prefix",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -1989,7 +1989,7 @@ async function saveGlobalSettings() {
   const feeSettings = getFeeSettingsInputData();
 
   const { error } = await supabaseClient
-    .from("stores")
+    .from("shop_stores")
     .update({
       paypay_fee_rate: feeSettings.paypay,
       point_fee_rate: feeSettings.point,
@@ -2018,7 +2018,7 @@ async function createExchangeLogForCurrentDay(dailyRecordId, giveToReserve, take
   }
 
   const { error } = await supabaseClient
-    .from("exchange_logs")
+    .from("shop_shop_exchange_logs")
     .insert({
       store_id: currentStoreId,
       daily_record_id: dailyRecordId || null,
@@ -2039,7 +2039,7 @@ async function getLatestExchangeLogForCurrentDay() {
   }
 
   const { data, error } = await supabaseClient
-    .from("exchange_logs")
+    .from("shop_shop_exchange_logs")
     .select("*")
     .eq("store_id", currentStoreId)
     .eq("record_date", formatDateKey(currentYear, currentMonth, currentDay))
@@ -2155,7 +2155,7 @@ async function confirmAndUndoExchange() {
     currentMonthData[currentDay] = savedDay;
 
     const { error: deleteLogError } = await supabaseClient
-      .from("exchange_logs")
+      .from("shop_shop_exchange_logs")
       .delete()
       .eq("id", log.id);
 
@@ -2163,7 +2163,7 @@ async function confirmAndUndoExchange() {
       alert(
         "兑换已撤销，但删除兑换日志失败：\n" +
         deleteLogError.message +
-        "\n\n请到 Supabase exchange_logs 手动确认。"
+        "\n\n请到 Supabase shop_exchange_logs 手动确认。"
       );
     }
 
@@ -2221,7 +2221,7 @@ async function loadReserveDataFromSupabase() {
   }
 
   const { data, error } = await supabaseClient
-    .from("reserve_cash")
+    .from("shop_shop_reserve_cash")
     .select("denomination, count, target")
     .eq("store_id", currentStoreId)
     .order("denomination", { ascending: false });
@@ -2263,7 +2263,7 @@ async function saveReserveDataToSupabase(reserveData) {
   }));
 
   const { error } = await supabaseClient
-    .from("reserve_cash")
+    .from("shop_shop_reserve_cash")
     .upsert(rows, {
       onConflict: "store_id,denomination"
     });
