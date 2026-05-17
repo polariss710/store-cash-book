@@ -953,3 +953,26 @@ input[data-reserve-target]:disabled {
     print-color-adjust: exact;
   }
 }
+
+
+.step-badge {
+  display: inline-block;
+  background: #0f766e;
+  color: white;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 14px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.danger-action-btn {
+  width: 100%;
+  background: #7f1d1d;
+  color: white;
+  font-weight: 700;
+}
+
+.danger-action-btn:hover {
+  opacity: 0.88;
+}

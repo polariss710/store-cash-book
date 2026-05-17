@@ -707,6 +707,12 @@ async function openDay(day) {
   renderCashInputs();
   renderNonCashInputs();
   loadCurrentDayData();
+
+  const migrationTargetDateInput = document.getElementById("migrationTargetDate");
+  if (migrationTargetDateInput) {
+    migrationTargetDateInput.value = formatDateKey(currentYear, currentMonth, currentDay);
+  }
+
   calculateCurrentDay();
   applyPermissions();
 }
@@ -1136,6 +1142,97 @@ async function saveCurrentDay() {
   }
 }
 
+
+async function confirmAndMigrateCurrentDayData() {
+  if (!canAdmin()) {
+    alert("没有迁移权限。");
+    return;
+  }
+
+  if (!currentDay || !currentStoreId) {
+    alert("请先选择要迁移的数据日期。");
+    return;
+  }
+
+  const sourceDayData = currentMonthData[currentDay];
+
+  if (!sourceDayData || !sourceDayData.cash) {
+    alert("当前日期没有已保存的数据，无法迁移。");
+    return;
+  }
+
+  const targetInput = document.getElementById("migrationTargetDate");
+  const targetDate = targetInput?.value;
+
+  if (!targetDate) {
+    alert("请选择迁移目标日期。");
+    return;
+  }
+
+  const sourceDate = formatDateKey(currentYear, currentMonth, currentDay);
+
+  if (targetDate === sourceDate) {
+    alert("目标日期和当前日期相同，无需迁移。");
+    return;
+  }
+
+  const ok = confirm(
+    `确定要把 ${sourceDate} 的数据迁移到 ${targetDate} 吗？\n\n` +
+    `注意：如果目标日期已有数据，会被当前数据覆盖。\n` +
+    `迁移完成后，原日期数据会被删除。`
+  );
+
+  if (!ok) return;
+
+  const targetParts = targetDate.split("-").map(Number);
+  const targetYear = targetParts[0];
+  const targetMonth = targetParts[1];
+  const targetDay = targetParts[2];
+
+  const oldYear = currentYear;
+  const oldMonth = currentMonth;
+  const oldDay = currentDay;
+
+  try {
+    currentYear = targetYear;
+    currentMonth = targetMonth;
+
+    const migratedDayData = {
+      ...sourceDayData,
+      date: targetDate,
+      exchangeApplied: false,
+      exchangeAppliedAt: null,
+      exchangePlan: null
+    };
+
+    await upsertDayDataToSupabase(targetDay, migratedDayData);
+
+    const { error } = await supabaseClient
+      .from("shop_daily_records")
+      .delete()
+      .eq("store_id", currentStoreId)
+      .eq("record_date", sourceDate);
+
+    if (error) {
+      throw error;
+    }
+
+    document.getElementById("yearInput").value = targetYear;
+    document.getElementById("monthInput").value = targetMonth;
+
+    await generateMonth();
+    openDay(targetDay);
+
+    alert("数据迁移完成。");
+  } catch (error) {
+    currentYear = oldYear;
+    currentMonth = oldMonth;
+    currentDay = oldDay;
+    alert("数据迁移失败：" + error.message);
+  }
+}
+
+
 async function deleteCurrentDayData() {
   if (!canAdmin()) {
     alert("没有删除权限。");
@@ -1213,75 +1310,7 @@ function isExchangeAlreadyApplied() {
 }
 
 function renderExchangeActionStatus() {
-  const area = document.getElementById("exchangeActionArea");
-  const button = document.querySelector("#dayPage .execute-btn");
-  const undoButton = document.getElementById("undoExchangeBtn");
-
-  if (!area || !button) return;
-
-  function hideUndo() {
-    if (undoButton) {
-      undoButton.classList.add("hidden-by-state");
-      undoButton.disabled = true;
-    }
-  }
-
-  function showUndo() {
-    if (undoButton) {
-      undoButton.classList.remove("hidden-by-state");
-      undoButton.disabled = false;
-    }
-  }
-
-  hideUndo();
-
-  if (!canAdmin()) {
-    area.innerHTML = `<div class="diff-minus">当前用户没有执行兑换权限。</div>`;
-    button.disabled = true;
-    return;
-  }
-
-  const giveToReserve = currentExchangePlan.giveToReserve || [];
-  const takeFromReserve = currentExchangePlan.takeFromReserve || [];
-
-  const hasExchange =
-    giveToReserve.length > 0 || takeFromReserve.length > 0;
-
-  if (isExchangeAlreadyApplied()) {
-    const dayData = getCurrentDayData();
-
-    area.innerHTML =
-      `<div class="exchange-applied">本日兑换已执行。</div>` +
-      `<div class="diff-normal">执行时间：${formatDateTimeText(dayData.exchangeAppliedAt)}</div>` +
-      `<div class="diff-normal">如本日兑换执行错误，可点击下方按钮撤销。撤销会反向恢复备用金库存。</div>`;
-
-    button.disabled = true;
-    showUndo();
-    return;
-  }
-
-  if (!hasExchange) {
-    area.innerHTML = `<div class="exchange-applied">无需执行兑换。</div>`;
-    button.disabled = true;
-    return;
-  }
-
-  const shortageMessages = checkReserveShortageForCurrentPlan();
-
-  if (shortageMessages.length > 0) {
-    area.innerHTML =
-      `<div class="diff-minus">备用金不足，无法执行兑换：</div>` +
-      shortageMessages.map(msg => `<div class="diff-minus">${msg}</div>`).join("");
-
-    button.disabled = true;
-    return;
-  }
-
-  area.innerHTML =
-    `<div class="exchange-not-applied">本日兑换尚未执行。</div>` +
-    `<div class="diff-normal">确认实际完成兑换后，请点击下方按钮更新备用金库存。</div>`;
-
-  button.disabled = false;
+  return;
 }
 function checkReserveShortageForCurrentPlan() {
   const reserveData = getReserveData();
@@ -1853,7 +1882,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "5.0-hide-reserve-preview-for-staff",
+    version: "5.1-simplify-reserve-and-add-data-migration",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -2300,15 +2329,7 @@ async function showReservePage() {
   scrollToTop();
 
   await loadDefaultStore();
-  await loadReserveDataFromSupabase();
-
-  isTargetMaintenanceEnabled = false;
   renderFeeSettingsInputs();
-  syncTargetMaintenanceCheckbox();
-  renderReserveInputs();
-  renderReserveSummary();
-  renderReserveAlerts();
-  renderReserveRebalancePlan();
   applyPermissions();
 }
 
@@ -2779,54 +2800,7 @@ async function confirmAndRebalanceReserve() {
 }
 
 function renderReservePreview(container, giveToReserve, takeFromReserve) {
-  if (!canAdmin()) {
-    return;
-  }
-
-  const reserveData = getReserveData();
-  const afterReserve = cloneReserveData(reserveData);
-
-  giveToReserve.forEach(item => {
-    afterReserve[item.denom].count += item.count;
-  });
-
-  takeFromReserve.forEach(item => {
-    afterReserve[item.denom].count -= item.count;
-  });
-
-  const preview = document.createElement("div");
-  preview.className = "reserve-preview";
-
-  const title = document.createElement("div");
-  title.className = "exchange-section-title";
-  title.textContent = "兑换后备用金预估：";
-  preview.appendChild(title);
-
-  denominations.forEach(denom => {
-    const before = Number(reserveData[denom].count || 0);
-    const after = Number(afterReserve[denom].count || 0);
-    const target = Number(afterReserve[denom].target || 0);
-
-    const div = document.createElement("div");
-
-    if (after < 0) {
-      div.className = "reserve-negative";
-      div.textContent = `${denom}円：${before} → ${after}，备用金不足，无法完成兑换`;
-    } else if (after < target) {
-      div.className = "reserve-low";
-      div.textContent = `${denom}円：${before} → ${after}，低于目标 ${target}`;
-    } else if (after > target) {
-      div.className = "diff-plus";
-      div.textContent = `${denom}円：${before} → ${after}，高于目标 ${target}`;
-    } else {
-      div.className = "reserve-ok";
-      div.textContent = `${denom}円：${before} → ${after}，符合目标`;
-    }
-
-    preview.appendChild(div);
-  });
-
-  container.appendChild(preview);
+  return;
 }
 
 window.addEventListener("load", async () => {

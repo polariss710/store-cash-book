@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=50" />
+  <link rel="stylesheet" href="style.css?v=51" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=50" defer></script>
+  <script src="app.js?v=51" defer></script>
 </head>
 <body>
 
@@ -176,12 +176,12 @@
         </div>
 
         <div class="card">
-          <h2>现金数量录入</h2>
+          <h2><span class="step-badge">步骤1</span> 现金数量录入</h2>
           <div id="cashInputArea"></div>
         </div>
 
         <div class="card">
-          <h2>前日非现金收入录入</h2>
+          <h2><span class="step-badge">步骤2</span> 前日非现金收入录入</h2>
           <div class="standard-box">
             <span>PayPay、积分、信用卡只用于保存和月度统计，不参与找零和备用金计算。</span>
           </div>
@@ -223,15 +223,26 @@
           <div id="exchangeArea" class="diff-area">暂无数据</div>
         </div>
 
-        <div class="card admin-only">
-          <h2>执行兑换</h2>
-          <div id="exchangeActionArea" class="diff-area">请先确认上方兑换建议。</div>
-          <button class="execute-btn" type="button" onclick="confirmAndApplyExchange()">确认执行兑换并更新备用金</button>
-          <button id="undoExchangeBtn" class="undo-exchange-btn" type="button" onclick="confirmAndUndoExchange()">撤销当天兑换</button>
-        </div>
-
         <button class="save-btn write-only" type="button" onclick="saveCurrentDay()">保存当天数据</button>
         <button class="delete-day-btn admin-only" type="button" onclick="deleteCurrentDayData()">删除当天数据</button>
+
+        <div class="card admin-only">
+          <h2>数据迁移</h2>
+          <div class="standard-box">
+            <span>
+              如果实际业务中误把数据录入到错误日期，可以把当前日期的数据迁移到指定日期。
+              迁移会覆盖目标日期已有数据，并删除当前日期原数据。
+            </span>
+          </div>
+
+          <div class="form-row">
+            <label for="migrationTargetDate">迁移到日期</label>
+            <input id="migrationTargetDate" type="date" />
+          </div>
+
+          <button class="danger-action-btn" type="button" onclick="confirmAndMigrateCurrentDayData()">迁移当前日期数据</button>
+        </div>
+
       </section>
 
       <!-- 全局设置页面 -->
@@ -271,66 +282,6 @@
           </div>
 
           <button class="save-btn admin-only" type="button" onclick="saveGlobalSettings()">保存手续费设置</button>
-        </div>
-
-        <div class="card">
-          <h2>备用金管理</h2>
-
-          <div class="standard-box">
-            <strong>备用金目标规则：</strong><br />
-            目标库存默认为当日标准找零数量 × 2。<br />
-            <span>
-              5000円×6，
-              1000円×30，
-              500円×20，
-              100円×64，
-              50円×60，
-              10円×60
-            </span>
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>备用金库存设置</h2>
-
-          <label class="maintenance-toggle">
-            <input
-              id="targetMaintenanceCheckbox"
-              type="checkbox"
-              onchange="handleTargetMaintenanceToggle(this)"
-            />
-            <span>数据维护：允许修改目标库存</span>
-          </label>
-
-          <div class="maintenance-note">
-            默认关闭。关闭时目标库存不能修改；打开时会弹出确认提示。
-          </div>
-
-          <div id="reserveInputArea"></div>
-
-          <div class="reserve-setting-buttons">
-            <button class="save-btn admin-only" type="button" onclick="saveReserveData()">保存备用金设置</button>
-            <button class="init-reserve-btn admin-only" type="button" onclick="confirmAndInitializeReserveStock()">初始化当前库存为目标库存</button>
-          </div>
-        </div>
-
-        <div class="card result-card">
-          <h2>备用金总额</h2>
-
-          <div class="result-row">
-            <span>当前备用金总额</span>
-            <strong id="reserveCurrentTotalText">0円</strong>
-          </div>
-
-          <div class="result-row">
-            <span>目标备用金总额</span>
-            <strong id="reserveTargetTotalText">0円</strong>
-          </div>
-
-          <div class="result-row total-result-row">
-            <span>差额</span>
-            <strong id="reserveDiffTotalText">0円</strong>
-          </div>
         </div>
 
         <div class="card admin-only">
