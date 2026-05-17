@@ -1138,7 +1138,8 @@ async function saveCurrentDay() {
     renderMonthSummary(currentMonthData);
     renderExchangeActionStatus();
 
-    alert("当天数据已保存到云端。");
+    alert("当天数据已保存到云端。\n将返回月份页面。");
+    showMonthPage();
   } catch (error) {
     console.error(error);
     alert("保存云端数据失败：" + error.message);
