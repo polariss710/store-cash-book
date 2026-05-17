@@ -3,7 +3,7 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_HTCFg_w3vmdNqfG2ZE46-A_6KXpxAnz
 
 let supabaseClient = null;
 
-const INACTIVITY_LIMIT_MS = 2 * 60 * 1000;
+const INACTIVITY_LIMIT_MS = 10 * 60 * 1000;
 const activityEvents = ["click", "input", "keydown", "touchstart", "scroll"];
 let inactivityTimer = null;
 let isAutoSigningOut = false;
