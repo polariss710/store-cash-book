@@ -1820,7 +1820,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "3.7-reserve-initialize-button",
+    version: "3.8-move-backup-to-settings",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -1879,12 +1879,14 @@ async function importBackupFile(event) {
         return;
       }
 
-      const ok = confirm(
-        `确定要导入 ${backupData.year}年${backupData.month}月 的备份到云端吗？\n\n` +
-        `注意：这会覆盖云端该月份相同日期的数据。`
+      const confirmText = prompt(
+        `警告：即将导入 ${backupData.year}年${backupData.month}月 的系统备份。\n\n` +
+        `此操作会覆盖云端该月份相同日期的数据。\n` +
+        `如果确认继续，请输入 IMPORT。`
       );
 
-      if (!ok) {
+      if (confirmText !== "IMPORT") {
+        alert("已取消导入。");
         return;
       }
 

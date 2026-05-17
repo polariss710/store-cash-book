@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=37" />
+  <link rel="stylesheet" href="style.css?v=38" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=37" defer></script>
+  <script src="app.js?v=38" defer></script>
 </head>
 <body>
 
@@ -97,18 +97,6 @@
           </div>
 
           <button class="primary-btn" type="button" onclick="generateMonth()">生成 / 读取本月</button>
-
-          <div class="backup-buttons">
-            <button class="sub-btn" type="button" onclick="exportCurrentMonthData()">导出本月备份</button>
-            <button class="sub-btn admin-only" type="button" onclick="document.getElementById('importFileInput').click()">导入备份</button>
-            <input
-              id="importFileInput"
-              type="file"
-              accept=".json,application/json"
-              style="display: none;"
-              onchange="importBackupFile(event)"
-            />
-          </div>
 
           <div class="backup-buttons">
             <button class="sub-btn" type="button" onclick="exportMonthlyCsvReport()">导出月度CSV</button>
@@ -328,6 +316,31 @@
           <div class="result-row total-result-row">
             <span>差额</span>
             <strong id="reserveDiffTotalText">0円</strong>
+          </div>
+        </div>
+
+        <div class="card admin-only">
+          <h2>高级数据操作</h2>
+
+          <div class="warning-box">
+            <strong>注意：</strong><br />
+            <span>
+              系统数据已经保存在 Supabase 云端。这里的系统备份主要用于手动留档或异常恢复。
+              导入系统备份会覆盖云端当前月份相同日期的数据，请谨慎使用。
+            </span>
+          </div>
+
+          <div class="backup-buttons">
+            <button class="sub-btn" type="button" onclick="exportCurrentMonthData()">导出本月系统备份</button>
+            <button class="danger-action-btn" type="button" onclick="document.getElementById('importFileInput').click()">导入系统备份</button>
+
+            <input
+              id="importFileInput"
+              type="file"
+              accept=".json,application/json"
+              style="display: none;"
+              onchange="importBackupFile(event)"
+            />
           </div>
         </div>
 

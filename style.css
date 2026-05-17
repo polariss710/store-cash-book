@@ -598,3 +598,29 @@ input[data-reserve-target] {
 .reserve-header-target {
   color: #1d4ed8;
 }
+
+
+.warning-box {
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  color: #92400e;
+  padding: 12px;
+  border-radius: 12px;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.warning-box span {
+  font-size: 13px;
+}
+
+.danger-action-btn {
+  width: 100%;
+  background: #7f1d1d;
+  color: white;
+  font-weight: 700;
+}
+
+.danger-action-btn:hover {
+  opacity: 0.88;
+}
