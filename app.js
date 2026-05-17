@@ -1848,7 +1848,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.7-shop-table-prefix",
+    version: "4.8-fix-shop-prefix",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
