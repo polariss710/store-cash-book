@@ -1598,6 +1598,10 @@ function printMonthlyReport() {
 
   const summary = getMonthlyReportSummary(rows);
 
+  const reportExportCountKey =
+    `store-cash-book-report-export-count-${currentYear}-${String(currentMonth).padStart(2, "0")}`;
+  const reportExportCount = Number(localStorage.getItem(reportExportCountKey) || 0);
+
   const rowHtml = rows.map(row => {
     const statusClass = row.exchangeStatus === "已执行" ? "status-done" : "status-pending";
 
@@ -1793,18 +1797,45 @@ function printMonthlyReport() {
     }
 
     .no-print {
-      text-align: right;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
       padding: 20px 24px 12px;
     }
 
-    .print-btn {
-      border: 1px solid #0f766e;
-      background: #0f766e;
-      color: white;
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .print-btn,
+    .close-btn {
       border-radius: 10px;
       padding: 9px 16px;
       font-weight: 800;
       cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .print-btn {
+      border-color: #0f766e;
+      background: #0f766e;
+      color: white;
+    }
+
+    .close-btn {
+      border-color: #d1d5db;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .export-count {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 700;
     }
 
     @media print {
@@ -1847,7 +1878,14 @@ function printMonthlyReport() {
 <body>
   <div class="report-page">
     <div class="no-print">
-      <button class="print-btn" onclick="window.print()">打印 / 另存为PDF</button>
+      <div class="toolbar-left">
+        <button class="close-btn" onclick="window.close()">关闭页面</button>
+      </div>
+
+      <div class="toolbar-right">
+        <span id="exportCountText" class="export-count">已导出 ${reportExportCount} 次</span>
+        <button id="printReportBtn" class="print-btn" onclick="incrementExportCountAndPrint()">打印 / 另存为PDF</button>
+      </div>
     </div>
 
     <div class="report-header">
@@ -1936,6 +1974,26 @@ function printMonthlyReport() {
       </div>
     </div>
   </div>
+  <script>
+    const REPORT_EXPORT_COUNT_KEY = "${reportExportCountKey}";
+
+    function updateExportCountText(count) {
+      const text = document.getElementById("exportCountText");
+      if (text) {
+        text.textContent = "已导出 " + count + " 次";
+      }
+    }
+
+    function incrementExportCountAndPrint() {
+      const current = Number(localStorage.getItem(REPORT_EXPORT_COUNT_KEY) || 0);
+      const next = current + 1;
+
+      localStorage.setItem(REPORT_EXPORT_COUNT_KEY, String(next));
+      updateExportCountText(next);
+
+      window.print();
+    }
+  </script>
 </body>
 </html>`;
 
@@ -1964,7 +2022,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.1-print-report-header-refine",
+    version: "4.2-report-export-count-close-button",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
