@@ -1653,17 +1653,19 @@ function printMonthlyReport() {
     .report-page {
       margin: 24px;
       background: white;
-      border-radius: 18px;
+      border-radius: 22px;
       overflow: hidden;
       border: 1px solid #ccfbf1;
       box-shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
     }
 
     .report-header {
-      background: linear-gradient(135deg, #111827 0%, #0f766e 100%);
+      background: #0f766e;
       color: white;
-      padding: 26px 28px;
+      padding: 28px 28px;
       text-align: center;
+      border-radius: 18px;
+      margin: 18px 18px 0;
     }
 
     h1 {
@@ -1792,7 +1794,7 @@ function printMonthlyReport() {
 
     .no-print {
       text-align: right;
-      padding: 14px 18px 0;
+      padding: 20px 24px 12px;
     }
 
     .print-btn {
@@ -1826,7 +1828,9 @@ function printMonthlyReport() {
       }
 
       .report-header {
-        padding: 14mm 10mm 10mm;
+        margin: 0 0 8mm;
+        border-radius: 8px;
+        padding: 12mm 10mm 9mm;
       }
 
       .summary {
@@ -1960,7 +1964,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.0-themed-print-report",
+    version: "4.1-print-report-header-refine",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
