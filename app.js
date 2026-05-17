@@ -1820,7 +1820,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "3.2-global-settings-fee-10min-logout",
+    version: "3.6-teal-theme",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

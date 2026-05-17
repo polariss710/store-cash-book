@@ -4,13 +4,19 @@
 
 html,
 body {
-  touch-action: manipulation;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.95), transparent 34%),
+    linear-gradient(180deg, #0f766e 0%, #115e59 45%, #0f766e 100%);
+  color: #222;
+  min-height: 100vh;
 }
 
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
-  background: #f5f5f5;
+  background: #0f766e;
   color: #222;
 }
 
@@ -27,7 +33,9 @@ select,
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #111827;
+  background:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.95), transparent 34%),
+    linear-gradient(180deg, #111827 0%, #0f766e 100%);
 }
 
 .login-page.active {
@@ -70,10 +78,11 @@ select,
 }
 
 .app-header {
-  background: #1f2937;
+  background: #111827;
   color: white;
   padding: 20px 16px;
   text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 .app-header h1 {
@@ -97,7 +106,7 @@ select,
 }
 
 .small-header-btn {
-  background: #374151;
+  background: #134e4a;
   color: white;
   padding: 8px 10px;
   font-size: 13px;
@@ -107,6 +116,8 @@ select,
   max-width: 720px;
   margin: 0 auto;
   padding: 16px;
+  background: rgba(240, 253, 250, 0.76);
+  min-height: calc(100vh - 98px);
 }
 
 .page {
@@ -122,7 +133,8 @@ select,
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(204, 251, 241, 0.85);
 }
 
 .card h2 {
@@ -172,7 +184,7 @@ button {
 .primary-btn,
 .save-btn {
   width: 100%;
-  background: #2563eb;
+  background: #0f766e;
   color: white;
   font-weight: 700;
 }
@@ -210,14 +222,14 @@ button:disabled {
 
 .sub-btn {
   width: 100%;
-  background: #4b5563;
+  background: #134e4a;
   color: white;
   font-weight: 700;
 }
 
 .reserve-btn {
   width: 100%;
-  background: #059669;
+  background: #0f766e;
   color: white;
   font-weight: 700;
   margin-top: 12px;
@@ -246,8 +258,8 @@ button:disabled {
 }
 
 .day-card.saved {
-  border-color: #22c55e;
-  background: #f0fdf4;
+  border-color: #14b8a6;
+  background: #f0fdfa;
 }
 
 .day-card.warning {
@@ -256,8 +268,8 @@ button:disabled {
 }
 
 .day-card.applied {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: #0f766e;
+  background: #ecfeff;
 }
 
 .day-card strong {
@@ -274,11 +286,12 @@ button:disabled {
 }
 
 .standard-box {
-  background: #f3f4f6;
+  background: #f0fdfa;
   padding: 12px;
   border-radius: 12px;
   line-height: 1.7;
   margin-bottom: 14px;
+  border: 1px solid #ccfbf1;
 }
 
 .standard-box span {
@@ -331,7 +344,7 @@ button:disabled {
 }
 
 .result-card {
-  background: #eff6ff;
+  background: #ecfeff;
 }
 
 .result-row {
@@ -352,11 +365,11 @@ button:disabled {
 .total-result-row {
   margin-top: 6px;
   padding-top: 14px;
-  border-top: 2px solid #93c5fd;
+  border-top: 2px solid #14b8a6;
 }
 
 .total-result-row strong {
-  color: #1d4ed8;
+  color: #0f766e;
   font-size: 20px;
 }
 
@@ -533,4 +546,13 @@ button:disabled {
   font-weight: 700;
   color: #4b5563;
   min-width: 24px;
+}
+
+
+@media (min-width: 760px) {
+  .app-main {
+    margin-top: 16px;
+    margin-bottom: 24px;
+    border-radius: 24px;
+  }
 }
