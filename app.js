@@ -1589,6 +1589,169 @@ function escapeHtml(value) {
 }
 
 
+
+function buildReportStatusLabel(exchangeStatus) {
+  const statusClass = exchangeStatus === "已执行" ? "status-done" : "status-pending";
+  return `<span class="${statusClass}">${escapeHtml(exchangeStatus)}</span>`;
+}
+
+function renderEmbeddedMonthlyReport(rows, summary, reportExportCount) {
+  const area = document.getElementById("embeddedReportArea");
+
+  if (!area) return;
+
+  const rowHtml = rows.map(row => `
+    <tr>
+      <td>${escapeHtml(row.date)}</td>
+      <td class="report-num">${formatYen(row.cashIncome)}</td>
+      <td class="report-num">${formatYen(row.paypay)}</td>
+      <td class="report-num">${formatYen(row.point)}</td>
+      <td class="report-num">${formatYen(row.credit)}</td>
+      <td class="report-num">${formatYen(row.totalIncome)}</td>
+      <td class="report-num">${formatYen(row.feeTotal || 0)}</td>
+      <td class="report-num report-strong">${formatYen(row.totalIncomeAfterFee ?? row.totalIncome)}</td>
+      <td>${buildReportStatusLabel(row.exchangeStatus)}</td>
+    </tr>
+  `).join("");
+
+  const detailRowHtml = rows.map(row => `
+    <tr>
+      <td>${escapeHtml(row.date)}</td>
+      <td class="report-num">${row.cash10000}</td>
+      <td class="report-num">${row.cash5000}</td>
+      <td class="report-num">${row.cash1000}</td>
+      <td class="report-num">${row.cash500}</td>
+      <td class="report-num">${row.cash100}</td>
+      <td class="report-num">${row.cash50}</td>
+      <td class="report-num">${row.cash10}</td>
+      <td class="report-num report-strong">${formatYen(row.cashTotal)}</td>
+    </tr>
+  `).join("");
+
+  area.innerHTML = `
+    <div class="report-view">
+      <div class="report-toolbar">
+        <div class="report-toolbar-left">
+          <button class="report-close-btn" type="button" onclick="closeMonthlyReport()">关闭报表</button>
+        </div>
+
+        <div class="report-toolbar-right">
+          <span id="reportExportCountText" class="report-export-count">已导出 ${reportExportCount} 次</span>
+          <button class="report-print-btn" type="button" onclick="incrementReportCountAndPrint()">打印 / 另存为PDF</button>
+        </div>
+      </div>
+
+      <div class="report-header">
+        <h1>店铺记账系统 月度报表</h1>
+        <div class="subtitle">${currentYear}年${currentMonth}月</div>
+      </div>
+
+      <div class="report-content">
+        <div class="report-summary">
+          <div class="report-box">
+            <div class="report-label">已录入天数</div>
+            <div class="report-value">${summary.savedDays}天</div>
+          </div>
+          <div class="report-box">
+            <div class="report-label">现金收入合计</div>
+            <div class="report-value">${formatYen(summary.cashIncome)}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-label">PayPay合计</div>
+            <div class="report-value">${formatYen(summary.paypay)}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-label">积分合计</div>
+            <div class="report-value">${formatYen(summary.point)}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-label">信用卡合计</div>
+            <div class="report-value">${formatYen(summary.credit)}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-label">手续费前总收入</div>
+            <div class="report-value">${formatYen(summary.totalIncome)}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-label">手续费合计</div>
+            <div class="report-value">${formatYen(summary.feeTotal)}</div>
+          </div>
+          <div class="report-box highlight">
+            <div class="report-label">手续费后总收入</div>
+            <div class="report-value">${formatYen(summary.totalIncomeAfterFee)}</div>
+          </div>
+        </div>
+
+        <div class="report-section-title">每日收入明细</div>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>现金收入</th>
+              <th>PayPay</th>
+              <th>积分</th>
+              <th>信用卡</th>
+              <th>手续费前收入</th>
+              <th>手续费</th>
+              <th>手续费后收入</th>
+              <th>兑换状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowHtml}
+          </tbody>
+        </table>
+
+        <div class="report-section-title">现金数量明细</div>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>10000円</th>
+              <th>5000円</th>
+              <th>1000円</th>
+              <th>500円</th>
+              <th>100円</th>
+              <th>50円</th>
+              <th>10円</th>
+              <th>现金总额</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${detailRowHtml}
+          </tbody>
+        </table>
+
+        <div class="report-footer">
+          输出时间：${new Date().toLocaleString("ja-JP")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function closeMonthlyReport() {
+  hideAllPages();
+  document.getElementById("monthPage").classList.add("active");
+  scrollToTop();
+}
+
+async function incrementReportCountAndPrint() {
+  try {
+    const nextCount = await incrementMonthlyReportExportCount(currentYear, currentMonth);
+
+    const exportCountText = document.getElementById("reportExportCountText");
+    if (exportCountText) {
+      exportCountText.textContent = `已导出 ${nextCount} 次`;
+    }
+
+    window.print();
+  } catch (error) {
+    alert("更新导出次数失败：" + error.message);
+  }
+}
+
+
 async function getMonthlyReportExportCount(year, month) {
   if (!currentStoreId) {
     return 0;
@@ -1685,7 +1848,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.5-embedded-report-fixed",
+    version: "4.6-fix-embedded-report-render",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
