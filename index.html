@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=52" />
+  <link rel="stylesheet" href="style.css?v=53" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=52" defer></script>
+  <script src="app.js?v=53" defer></script>
 </head>
 <body>
 
@@ -50,7 +50,7 @@
         使用管理员用户名和密码登录
       </div>
 
-      <div class="login-version">当前版本：v52</div>
+      <div class="login-version">当前版本：v53</div>
     </div>
   </section>
 
@@ -106,6 +106,8 @@
           </div>
 
           <button class="reserve-btn admin-only" type="button" onclick="showReservePage()">全局设置</button>
+          <button class="salary-btn admin-only" type="button" onclick="showSalaryPage()">工资结算</button>
+
         </div>
 
         <div class="card result-card">
@@ -228,7 +230,7 @@
         <button class="save-btn write-only" type="button" onclick="saveCurrentDay()">保存当天数据</button>
         <button class="delete-day-btn admin-only" type="button" onclick="deleteCurrentDayData()">删除当天数据</button>
 
-        <div class="card admin-only">
+        <div class="card write-only">
           <h2>数据迁移</h2>
           <div class="standard-box">
             <span>
@@ -255,7 +257,7 @@
 
           <div class="standard-box">
             <strong>设置项目：</strong><br />
-            <span>当前包含：手续费设置、备用金管理。</span>
+            <span>当前包含：手续费设置、高级数据操作。</span>
           </div>
         </div>
 
@@ -310,19 +312,63 @@
             />
           </div>
         </div>
-
-        <div class="card">
-          <h2>备用金状态</h2>
-          <div id="reserveAlertArea" class="diff-area">暂无数据</div>
-        </div>
-
-        <div class="card">
-          <h2>备用金内部整理建议</h2>
-          <div id="reserveRebalanceArea" class="diff-area">暂无数据</div>
-          <button class="execute-btn admin-only" type="button" onclick="confirmAndRebalanceReserve()">确认已整理备用金</button>
+<button class="execute-btn admin-only" type="button" onclick="confirmAndRebalanceReserve()">确认已整理备用金</button>
         </div>
       </section>
 
+
+
+      <!-- 工资结算页面 -->
+      <section id="salaryPage" class="page">
+        <div class="card">
+          <button class="back-btn" type="button" onclick="showMonthPage()">← 返回月份</button>
+          <h2>工资结算</h2>
+
+          <div class="standard-box">
+            <span>
+              按当前月份统计人员工资。先选择录入日期，再在人员卡片中录入当日工资和交通费。
+            </span>
+          </div>
+
+          <div class="form-row">
+            <label for="salaryInputDate">录入日期</label>
+            <input id="salaryInputDate" type="date" onchange="renderSalaryCards()" />
+          </div>
+
+          <div class="form-row">
+            <label for="newSalaryStaffName">新增人员</label>
+            <input id="newSalaryStaffName" type="text" placeholder="输入姓名" />
+          </div>
+
+          <button class="primary-btn admin-only" type="button" onclick="addSalaryStaff()">添加人员卡片</button>
+        </div>
+
+        <div class="card result-card">
+          <h2>本月工资汇总</h2>
+
+          <div class="result-row">
+            <span>人员数</span>
+            <strong id="salaryStaffCountText">0人</strong>
+          </div>
+
+          <div class="result-row">
+            <span>工资合计</span>
+            <strong id="salaryTotalWageText">0円</strong>
+          </div>
+
+          <div class="result-row">
+            <span>交通费合计</span>
+            <strong id="salaryTotalTransportText">0円</strong>
+          </div>
+
+          <div class="result-row total-result-row">
+            <span>总支出</span>
+            <strong id="salaryGrandTotalText">0円</strong>
+          </div>
+        </div>
+
+        <div id="salaryStaffList"></div>
+      </section>
 
       <!-- 月度报表页面 -->
       <section id="reportPage" class="page">

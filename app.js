@@ -49,6 +49,9 @@ let currentFeeSettings = {
   credit: 0
 };
 let currentMonthData = {};
+
+let salaryStaffList = [];
+let salaryMonthRecords = {};
 let currentReserveData = null;
 let isTargetMaintenanceEnabled = false;
 
@@ -1144,7 +1147,7 @@ async function saveCurrentDay() {
 
 
 async function confirmAndMigrateCurrentDayData() {
-  if (!canAdmin()) {
+  if (!canWrite()) {
     alert("没有迁移权限。");
     return;
   }
@@ -1869,6 +1872,341 @@ async function printMonthlyReport() {
   scrollToTop();
 }
 
+
+/* =========================
+   工资结算
+========================= */
+
+function getSalaryDateInputValue() {
+  const input = document.getElementById("salaryInputDate");
+  if (input && input.value) {
+    return input.value;
+  }
+
+  return formatDateKey(currentYear, currentMonth, 1);
+}
+
+function getSalaryRecordKey(staffId, dateText) {
+  return `${staffId}_${dateText}`;
+}
+
+async function showSalaryPage() {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  hideAllPages();
+  document.getElementById("salaryPage").classList.add("active");
+  scrollToTop();
+
+  const input = document.getElementById("salaryInputDate");
+  if (input && !input.value) {
+    input.value = formatDateKey(currentYear, currentMonth, currentDay || 1);
+  }
+
+  await loadSalaryData();
+  renderSalaryCards();
+  applyPermissions();
+}
+
+async function loadSalaryData() {
+  if (!currentStoreId) {
+    await loadDefaultStore();
+  }
+
+  const monthStart = formatDateKey(currentYear, currentMonth, 1);
+  const monthEnd = formatDateKey(
+    currentYear,
+    currentMonth,
+    getDaysInMonth(currentYear, currentMonth)
+  );
+
+  const { data: staffData, error: staffError } = await supabaseClient
+    .from("shop_salary_staff")
+    .select("*")
+    .eq("store_id", currentStoreId)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (staffError) {
+    alert("读取人员数据失败：" + staffError.message);
+    return;
+  }
+
+  salaryStaffList = staffData || [];
+
+  const { data: recordData, error: recordError } = await supabaseClient
+    .from("shop_salary_daily_records")
+    .select("*")
+    .eq("store_id", currentStoreId)
+    .gte("work_date", monthStart)
+    .lte("work_date", monthEnd);
+
+  if (recordError) {
+    alert("读取工资数据失败：" + recordError.message);
+    return;
+  }
+
+  salaryMonthRecords = {};
+
+  (recordData || []).forEach(record => {
+    salaryMonthRecords[getSalaryRecordKey(record.staff_id, record.work_date)] = record;
+  });
+}
+
+function getStaffMonthlySalarySummary(staffId) {
+  let wageTotal = 0;
+  let transportTotal = 0;
+
+  Object.values(salaryMonthRecords).forEach(record => {
+    if (record.staff_id === staffId) {
+      wageTotal += Number(record.wage_amount || 0);
+      transportTotal += Number(record.transport_amount || 0);
+    }
+  });
+
+  return {
+    wageTotal,
+    transportTotal,
+    total: wageTotal + transportTotal
+  };
+}
+
+function renderSalarySummary() {
+  let wageTotal = 0;
+  let transportTotal = 0;
+
+  salaryStaffList.forEach(staff => {
+    const summary = getStaffMonthlySalarySummary(staff.id);
+    wageTotal += summary.wageTotal;
+    transportTotal += summary.transportTotal;
+  });
+
+  const staffCount = document.getElementById("salaryStaffCountText");
+  const wageText = document.getElementById("salaryTotalWageText");
+  const transportText = document.getElementById("salaryTotalTransportText");
+  const grandText = document.getElementById("salaryGrandTotalText");
+
+  if (staffCount) staffCount.textContent = `${salaryStaffList.length}人`;
+  if (wageText) wageText.textContent = formatYen(wageTotal);
+  if (transportText) transportText.textContent = formatYen(transportTotal);
+  if (grandText) grandText.textContent = formatYen(wageTotal + transportTotal);
+}
+
+function renderSalaryCards() {
+  const area = document.getElementById("salaryStaffList");
+
+  if (!area) return;
+
+  area.innerHTML = "";
+
+  if (salaryStaffList.length === 0) {
+    area.innerHTML = `
+      <div class="card">
+        <h2>人员卡片</h2>
+        <div class="standard-box">暂无人员。请先添加人员卡片。</div>
+      </div>
+    `;
+
+    renderSalarySummary();
+    return;
+  }
+
+  const dateText = getSalaryDateInputValue();
+
+  salaryStaffList.forEach(staff => {
+    const summary = getStaffMonthlySalarySummary(staff.id);
+    const record = salaryMonthRecords[getSalaryRecordKey(staff.id, dateText)] || {};
+
+    const card = document.createElement("div");
+    card.className = "salary-staff-card";
+
+    card.innerHTML = `
+      <div class="salary-staff-header">
+        <div>
+          <div class="salary-staff-name">${escapeHtml(staff.name)}</div>
+          <div class="maintenance-note">录入日期：${escapeHtml(dateText)}</div>
+        </div>
+      </div>
+
+      <div class="salary-staff-summary">
+        <div class="salary-mini-box">
+          <div class="salary-mini-label">当月总工资</div>
+          <div class="salary-mini-value">${formatYen(summary.wageTotal)}</div>
+        </div>
+
+        <div class="salary-mini-box">
+          <div class="salary-mini-label">交通费</div>
+          <div class="salary-mini-value">${formatYen(summary.transportTotal)}</div>
+        </div>
+
+        <div class="salary-mini-box">
+          <div class="salary-mini-label">当月合计</div>
+          <div class="salary-mini-value">${formatYen(summary.total)}</div>
+        </div>
+      </div>
+
+      <div class="salary-daily-inputs">
+        <div class="form-row vertical">
+          <label>当天工资</label>
+          <input
+            type="number"
+            min="0"
+            value="${Number(record.wage_amount || 0)}"
+            data-salary-wage="${staff.id}"
+          />
+        </div>
+
+        <div class="form-row vertical">
+          <label>当天交通费</label>
+          <input
+            type="number"
+            min="0"
+            value="${Number(record.transport_amount || 0)}"
+            data-salary-transport="${staff.id}"
+          />
+        </div>
+      </div>
+
+      <div class="form-row vertical">
+        <label>备注</label>
+        <input
+          type="text"
+          value="${escapeHtml(record.note || "")}"
+          data-salary-note="${staff.id}"
+          placeholder="可选"
+        />
+      </div>
+
+      <div class="salary-card-actions">
+        <button class="salary-save-btn" type="button" onclick="saveSalaryDailyRecord('${staff.id}')">保存该人员当天数据</button>
+        <button class="salary-delete-btn" type="button" onclick="deactivateSalaryStaff('${staff.id}')">删除人员卡片</button>
+      </div>
+    `;
+
+    area.appendChild(card);
+  });
+
+  renderSalarySummary();
+}
+
+async function addSalaryStaff() {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  const input = document.getElementById("newSalaryStaffName");
+  const name = input?.value?.trim();
+
+  if (!name) {
+    alert("请输入人员姓名。");
+    return;
+  }
+
+  const maxOrder = salaryStaffList.reduce(
+    (max, staff) => Math.max(max, Number(staff.display_order || 0)),
+    0
+  );
+
+  const { error } = await supabaseClient
+    .from("shop_salary_staff")
+    .insert({
+      store_id: currentStoreId,
+      name,
+      display_order: maxOrder + 1,
+      is_active: true,
+      created_by: currentUser?.id || null
+    });
+
+  if (error) {
+    alert("添加人员失败：" + error.message);
+    return;
+  }
+
+  input.value = "";
+
+  await loadSalaryData();
+  renderSalaryCards();
+}
+
+async function saveSalaryDailyRecord(staffId) {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  const dateText = getSalaryDateInputValue();
+  const wageInput = document.querySelector(`input[data-salary-wage="${staffId}"]`);
+  const transportInput = document.querySelector(`input[data-salary-transport="${staffId}"]`);
+  const noteInput = document.querySelector(`input[data-salary-note="${staffId}"]`);
+
+  const wageAmount = Number(wageInput?.value || 0);
+  const transportAmount = Number(transportInput?.value || 0);
+  const note = noteInput?.value || "";
+
+  const { data, error } = await supabaseClient
+    .from("shop_salary_daily_records")
+    .upsert({
+      store_id: currentStoreId,
+      staff_id: staffId,
+      work_date: dateText,
+      wage_amount: wageAmount,
+      transport_amount: transportAmount,
+      note,
+      updated_by: currentUser?.id || null
+    }, {
+      onConflict: "store_id,staff_id,work_date"
+    })
+    .select()
+    .single();
+
+  if (error) {
+    alert("保存工资数据失败：" + error.message);
+    return;
+  }
+
+  salaryMonthRecords[getSalaryRecordKey(staffId, dateText)] = data;
+
+  renderSalaryCards();
+  alert("工资数据已保存。");
+}
+
+async function deactivateSalaryStaff(staffId) {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  const staff = salaryStaffList.find(item => item.id === staffId);
+  const ok = confirm(
+    `确定要删除「${staff?.name || ""}」的人员卡片吗？\n\n` +
+    `历史工资记录会保留，但该人员不再显示在本月人员卡片中。`
+  );
+
+  if (!ok) return;
+
+  const { error } = await supabaseClient
+    .from("shop_salary_staff")
+    .update({
+      is_active: false,
+      updated_by: currentUser?.id || null
+    })
+    .eq("id", staffId)
+    .eq("store_id", currentStoreId);
+
+  if (error) {
+    alert("删除人员失败：" + error.message);
+    return;
+  }
+
+  await loadSalaryData();
+  renderSalaryCards();
+}
+
+
 /* =========================
    导入导出
 ========================= */
@@ -1882,7 +2220,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "5.2-step3-and-login-version",
+    version: "5.3-salary-settlement-page",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

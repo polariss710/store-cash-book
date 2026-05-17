@@ -985,3 +985,100 @@ input[data-reserve-target]:disabled {
   color: #6b7280;
   font-weight: 700;
 }
+
+
+.salary-btn {
+  width: 100%;
+  background: #0e7490;
+  color: white;
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+.salary-btn:hover {
+  opacity: 0.88;
+}
+
+.salary-staff-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(204, 251, 241, 0.85);
+}
+
+.salary-staff-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.salary-staff-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.salary-staff-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.salary-mini-box {
+  background: #ecfeff;
+  border: 1px solid #99f6e4;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.salary-mini-label {
+  font-size: 12px;
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.salary-mini-value {
+  font-size: 18px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.salary-daily-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.salary-card-actions {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.salary-delete-btn {
+  background: #7f1d1d;
+  color: white;
+  font-weight: 700;
+}
+
+.salary-save-btn {
+  background: #0f766e;
+  color: white;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .salary-staff-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .salary-daily-inputs {
+    grid-template-columns: 1fr;
+  }
+}
