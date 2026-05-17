@@ -1685,7 +1685,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.4-embedded-monthly-report",
+    version: "4.5-embedded-report-fixed",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
