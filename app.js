@@ -1588,7 +1588,73 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function printMonthlyReport() {
+
+async function getMonthlyReportExportCount(year, month) {
+  if (!currentStoreId) {
+    return 0;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("monthly_report_exports")
+    .select("export_count")
+    .eq("store_id", currentStoreId)
+    .eq("report_year", year)
+    .eq("report_month", month)
+    .maybeSingle();
+
+  if (error) {
+    console.error("读取月度报表导出次数失败", error);
+    return 0;
+  }
+
+  return Number(data?.export_count || 0);
+}
+
+async function incrementMonthlyReportExportCount(year, month) {
+  if (!currentStoreId) {
+    throw new Error("未读取到默认店铺。");
+  }
+
+  const currentCount = await getMonthlyReportExportCount(year, month);
+  const nextCount = currentCount + 1;
+
+  const { error } = await supabaseClient
+    .from("monthly_report_exports")
+    .upsert({
+      store_id: currentStoreId,
+      report_year: year,
+      report_month: month,
+      export_count: nextCount,
+      last_exported_at: new Date().toISOString(),
+      last_exported_by: currentUser?.id || null
+    }, {
+      onConflict: "store_id,report_year,report_month"
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return nextCount;
+}
+
+async function incrementMonthlyReportExportCountAndPrint(reportWindow, year, month) {
+  try {
+    const nextCount = await incrementMonthlyReportExportCount(year, month);
+
+    const exportCountText = reportWindow?.document?.getElementById("exportCountText");
+    if (exportCountText) {
+      exportCountText.textContent = `已导出 ${nextCount} 次`;
+    }
+
+    reportWindow.print();
+  } catch (error) {
+    alert("更新导出次数失败：" + error.message);
+  }
+}
+
+
+async function printMonthlyReport() {
   const rows = getDailyReportRows();
 
   if (rows.length === 0) {
@@ -1598,9 +1664,7 @@ function printMonthlyReport() {
 
   const summary = getMonthlyReportSummary(rows);
 
-  const reportExportCountKey =
-    `store-cash-book-report-export-count-${currentYear}-${String(currentMonth).padStart(2, "0")}`;
-  const reportExportCount = Number(localStorage.getItem(reportExportCountKey) || 0);
+  const reportExportCount = await getMonthlyReportExportCount(currentYear, currentMonth);
 
   const rowHtml = rows.map(row => {
     const statusClass = row.exchangeStatus === "已执行" ? "status-done" : "status-pending";
@@ -1975,23 +2039,16 @@ function printMonthlyReport() {
     </div>
   </div>
   <script>
-    const REPORT_EXPORT_COUNT_KEY = "${reportExportCountKey}";
-
-    function updateExportCountText(count) {
-      const text = document.getElementById("exportCountText");
-      if (text) {
-        text.textContent = "已导出 " + count + " 次";
-      }
-    }
-
     function incrementExportCountAndPrint() {
-      const current = Number(localStorage.getItem(REPORT_EXPORT_COUNT_KEY) || 0);
-      const next = current + 1;
-
-      localStorage.setItem(REPORT_EXPORT_COUNT_KEY, String(next));
-      updateExportCountText(next);
-
-      window.print();
+      if (window.opener && window.opener.incrementMonthlyReportExportCountAndPrint) {
+        window.opener.incrementMonthlyReportExportCountAndPrint(
+          window,
+          ${currentYear},
+          ${currentMonth}
+        );
+      } else {
+        window.print();
+      }
     }
   </script>
 </body>
@@ -2022,7 +2079,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.2-report-export-count-close-button",
+    version: "4.3-cloud-report-export-count",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
