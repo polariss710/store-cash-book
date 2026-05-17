@@ -1820,7 +1820,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "3.6-teal-theme",
+    version: "3.7-reserve-initialize-button",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -2284,12 +2284,12 @@ function renderReserveInputs() {
   header.className = "reserve-header";
   header.innerHTML = `
     <div>面额</div>
-    <div>当前库存</div>
-    <div>-</div>
-    <div>+</div>
-    <div>目标库存</div>
-    <div>-</div>
-    <div>+</div>
+    <div class="reserve-header-current">当前库存</div>
+    <div class="reserve-header-current">-</div>
+    <div class="reserve-header-current">+</div>
+    <div class="reserve-header-target">目标库存</div>
+    <div class="reserve-header-target">-</div>
+    <div class="reserve-header-target">+</div>
   `;
   area.appendChild(header);
 
@@ -2403,6 +2403,40 @@ async function saveReserveData() {
     alert("备用金保存失败：" + error.message);
   }
 }
+
+async function confirmAndInitializeReserveStock() {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  const reserveData = getReserveInputData();
+
+  const ok = confirm(
+    "确定要把当前库存初始化为目标库存吗？\n\n" +
+    "执行后，每个面额的当前库存会自动变成对应目标库存，并保存到云端。"
+  );
+
+  if (!ok) return;
+
+  denominations.forEach(denom => {
+    reserveData[denom].count = Number(reserveData[denom].target || 0);
+  });
+
+  try {
+    await saveReserveDataToSupabase(reserveData);
+
+    renderReserveInputs();
+    renderReserveSummary(reserveData);
+    renderReserveAlerts(reserveData);
+    renderReserveRebalancePlan(reserveData);
+
+    alert("当前库存已初始化为目标库存，并保存到云端。");
+  } catch (error) {
+    alert("初始化备用金失败：" + error.message);
+  }
+}
+
 
 function renderReserveLiveInfoFromInputs() {
   const reserveData = getReserveInputData();

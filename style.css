@@ -556,3 +556,45 @@ button:disabled {
     border-radius: 24px;
   }
 }
+
+
+.reserve-setting-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.init-reserve-btn {
+  width: 100%;
+  background: #0e7490;
+  color: white;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.init-reserve-btn:hover {
+  opacity: 0.88;
+}
+
+/* 备用金设置：当前库存与目标库存颜色区分 */
+input[data-reserve-count] {
+  color: #0f766e;
+  font-weight: 700;
+  background: #f0fdfa;
+  border-color: #99f6e4;
+}
+
+input[data-reserve-target] {
+  color: #1d4ed8;
+  font-weight: 700;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.reserve-header-current {
+  color: #0f766e;
+}
+
+.reserve-header-target {
+  color: #1d4ed8;
+}

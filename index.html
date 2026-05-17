@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=36" />
+  <link rel="stylesheet" href="style.css?v=37" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=36" defer></script>
+  <script src="app.js?v=37" defer></script>
 </head>
 <body>
 
@@ -306,7 +306,10 @@
           <h2>备用金库存设置</h2>
           <div id="reserveInputArea"></div>
 
-          <button class="save-btn admin-only" type="button" onclick="saveReserveData()">保存备用金设置</button>
+          <div class="reserve-setting-buttons">
+            <button class="save-btn admin-only" type="button" onclick="saveReserveData()">保存备用金设置</button>
+            <button class="init-reserve-btn admin-only" type="button" onclick="confirmAndInitializeReserveStock()">初始化当前库存为目标库存</button>
+          </div>
         </div>
 
         <div class="card result-card">
