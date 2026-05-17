@@ -1311,3 +1311,23 @@ input[data-reserve-target]:disabled {
     color: #6b7280;
   }
 }
+
+
+.salary-export-all-btn {
+  width: 100%;
+  background: #0e7490;
+  color: white;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.salary-export-all-btn:hover {
+  opacity: 0.88;
+}
+
+@media print {
+  .salary-print-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+}

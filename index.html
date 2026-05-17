@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=57" />
+  <link rel="stylesheet" href="style.css?v=59" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=57" defer></script>
+  <script src="app.js?v=59" defer></script>
 </head>
 <body>
 
@@ -50,7 +50,7 @@
         使用管理员用户名和密码登录
       </div>
 
-      <div class="login-version">当前版本：v57</div>
+      <div class="login-version">当前版本：v59</div>
     </div>
   </section>
 
@@ -372,6 +372,8 @@
             <strong id="salaryGrandTotalText">0円</strong>
           </div>
         </div>
+
+        <button class="salary-export-all-btn admin-only" type="button" onclick="exportAllSalaryStaffPdf()">一键导出所有人员工资PDF</button>
 
         <div id="salaryStaffList"></div>
         <div id="salaryPrintArea" class="salary-print-area"></div>

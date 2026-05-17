@@ -2111,6 +2111,7 @@ function renderSalaryCards() {
             value="${Number(record.wage_amount || 0)}"
             data-salary-month-wage="${staff.id}"
             data-salary-date="${dateText}"
+            oninput="updateSalaryCardLiveTotals(\'${staff.id}\')"
           />
         </td>
         <td>
@@ -2120,6 +2121,7 @@ function renderSalaryCards() {
             value="${Number(record.transport_amount || 0)}"
             data-salary-month-transport="${staff.id}"
             data-salary-date="${dateText}"
+            oninput="updateSalaryCardLiveTotals(\'${staff.id}\')"
           />
         </td>
         <td>
@@ -2149,17 +2151,17 @@ function renderSalaryCards() {
     <div class="salary-staff-summary">
       <div class="salary-mini-box">
         <div class="salary-mini-label">当月总工资</div>
-        <div class="salary-mini-value">${formatYen(summary.wageTotal)}</div>
+        <div id="salaryLiveWageTotal-${staff.id}" class="salary-mini-value">${formatYen(summary.wageTotal)}</div>
       </div>
 
       <div class="salary-mini-box">
         <div class="salary-mini-label">交通费</div>
-        <div class="salary-mini-value">${formatYen(summary.transportTotal)}</div>
+        <div id="salaryLiveTransportTotal-${staff.id}" class="salary-mini-value">${formatYen(summary.transportTotal)}</div>
       </div>
 
       <div class="salary-mini-box">
         <div class="salary-mini-label">当月合计</div>
-        <div class="salary-mini-value">${formatYen(summary.total)}</div>
+        <div id="salaryLiveGrandTotal-${staff.id}" class="salary-mini-value">${formatYen(summary.total)}</div>
       </div>
     </div>
 
@@ -2177,9 +2179,9 @@ function renderSalaryCards() {
           ${rows.join("")}
           <tr class="salary-month-total-row">
             <td>合计</td>
-            <td>${formatYen(summary.wageTotal)}</td>
-            <td>${formatYen(summary.transportTotal)}</td>
-            <td>${formatYen(summary.total)}</td>
+            <td id="salaryTableWageTotal-${staff.id}">${formatYen(summary.wageTotal)}</td>
+            <td id="salaryTableTransportTotal-${staff.id}">${formatYen(summary.transportTotal)}</td>
+            <td id="salaryTableGrandTotal-${staff.id}">${formatYen(summary.total)}</td>
           </tr>
         </tbody>
       </table>
@@ -2196,6 +2198,245 @@ function renderSalaryCards() {
 
   renderSalarySummary();
 }
+
+
+function buildSalaryPrintDocumentForStaff(staffId) {
+  const staff = salaryStaffList.find(item => item.id === staffId);
+
+  if (!staff) {
+    return "";
+  }
+
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+  const rows = [];
+  let wageTotal = 0;
+  let transportTotal = 0;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateText = formatDateKey(currentYear, currentMonth, day);
+    const wageInput = document.querySelector(`input[data-salary-month-wage="${staffId}"][data-salary-date="${dateText}"]`);
+    const transportInput = document.querySelector(`input[data-salary-month-transport="${staffId}"][data-salary-date="${dateText}"]`);
+    const noteInput = document.querySelector(`input[data-salary-month-note="${staffId}"][data-salary-date="${dateText}"]`);
+
+    const existingRecord = salaryMonthRecords[getSalaryRecordKey(staffId, dateText)] || {};
+
+    const wageAmount = Number(wageInput?.value ?? existingRecord.wage_amount ?? 0);
+    const transportAmount = Number(transportInput?.value ?? existingRecord.transport_amount ?? 0);
+    const note = noteInput?.value ?? existingRecord.note ?? "";
+
+    wageTotal += wageAmount;
+    transportTotal += transportAmount;
+
+    rows.push(`
+      <tr>
+        <td>${currentMonth}/${day}（${getJapaneseWeekday(currentYear, currentMonth, day)}）</td>
+        <td class="salary-print-num">${formatYen(wageAmount)}</td>
+        <td class="salary-print-num">${formatYen(transportAmount)}</td>
+        <td>${escapeHtml(note)}</td>
+      </tr>
+    `);
+  }
+
+  return `
+    <div class="salary-print-document">
+      <div class="salary-print-header">
+        <div class="salary-print-title">工资明细</div>
+        <div class="salary-print-subtitle">${currentYear}年${currentMonth}月 / ${escapeHtml(staff.name)}</div>
+      </div>
+
+      <div class="salary-print-summary">
+        <div class="salary-print-box">
+          <div class="salary-print-label">当月总工资</div>
+          <div class="salary-print-value">${formatYen(wageTotal)}</div>
+        </div>
+        <div class="salary-print-box">
+          <div class="salary-print-label">交通费</div>
+          <div class="salary-print-value">${formatYen(transportTotal)}</div>
+        </div>
+        <div class="salary-print-box">
+          <div class="salary-print-label">合计</div>
+          <div class="salary-print-value">${formatYen(wageTotal + transportTotal)}</div>
+        </div>
+      </div>
+
+      <table class="salary-print-table">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>当天工资</th>
+            <th>当天交通费</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.join("")}
+          <tr>
+            <th>合计</th>
+            <th class="salary-print-num">${formatYen(wageTotal)}</th>
+            <th class="salary-print-num">${formatYen(transportTotal)}</th>
+            <th class="salary-print-num">${formatYen(wageTotal + transportTotal)}</th>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="salary-print-footer">
+        输出时间：${new Date().toLocaleString("ja-JP")}
+      </div>
+    </div>
+  `;
+}
+
+function printSalaryDocuments(html) {
+  const printArea = document.getElementById("salaryPrintArea");
+
+  if (!printArea) {
+    alert("打印区域未找到。");
+    return;
+  }
+
+  printArea.innerHTML = html;
+
+  document.body.classList.add("salary-print-mode");
+  window.print();
+
+  setTimeout(() => {
+    document.body.classList.remove("salary-print-mode");
+  }, 500);
+}
+
+function exportCurrentSalaryStaffPdf(staffId) {
+  const html = buildSalaryPrintDocumentForStaff(staffId);
+
+  if (!html) {
+    alert("没有找到人员数据。");
+    return;
+  }
+
+  printSalaryDocuments(html);
+}
+
+function exportAllSalaryStaffPdf() {
+  if (!salaryStaffList || salaryStaffList.length === 0) {
+    alert("没有可导出的人员。");
+    return;
+  }
+
+  const html = salaryStaffList
+    .map(staff => buildSalaryPrintDocumentForStaff(staff.id))
+    .filter(Boolean)
+    .join('<div class="salary-print-page-break"></div>');
+
+  if (!html) {
+    alert("没有可导出的工资数据。");
+    return;
+  }
+
+  printSalaryDocuments(html);
+}
+
+
+
+
+function updateSalaryCardLiveTotals(staffId) {
+  const wageInputs = document.querySelectorAll(`input[data-salary-month-wage="${staffId}"]`);
+  const transportInputs = document.querySelectorAll(`input[data-salary-month-transport="${staffId}"]`);
+
+  let wageTotal = 0;
+  let transportTotal = 0;
+
+  wageInputs.forEach(input => {
+    wageTotal += Number(input.value || 0);
+  });
+
+  transportInputs.forEach(input => {
+    transportTotal += Number(input.value || 0);
+  });
+
+  const wageText = document.getElementById(`salaryLiveWageTotal-${staffId}`);
+  const transportText = document.getElementById(`salaryLiveTransportTotal-${staffId}`);
+  const totalText = document.getElementById(`salaryLiveGrandTotal-${staffId}`);
+  const tableWageText = document.getElementById(`salaryTableWageTotal-${staffId}`);
+  const tableTransportText = document.getElementById(`salaryTableTransportTotal-${staffId}`);
+  const tableGrandText = document.getElementById(`salaryTableGrandTotal-${staffId}`);
+
+  if (wageText) wageText.textContent = formatYen(wageTotal);
+  if (transportText) transportText.textContent = formatYen(transportTotal);
+  if (totalText) totalText.textContent = formatYen(wageTotal + transportTotal);
+  if (tableWageText) tableWageText.textContent = formatYen(wageTotal);
+  if (tableTransportText) tableTransportText.textContent = formatYen(transportTotal);
+  if (tableGrandText) tableGrandText.textContent = formatYen(wageTotal + transportTotal);
+}
+
+
+async function saveSalaryMonthlyRecords(staffId) {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  if (!currentStoreId) {
+    await loadDefaultStore();
+  }
+
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+  const monthStart = formatDateKey(currentYear, currentMonth, 1);
+  const monthEnd = formatDateKey(currentYear, currentMonth, daysInMonth);
+  const rows = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateText = formatDateKey(currentYear, currentMonth, day);
+    const wageInput = document.querySelector(`input[data-salary-month-wage="${staffId}"][data-salary-date="${dateText}"]`);
+    const transportInput = document.querySelector(`input[data-salary-month-transport="${staffId}"][data-salary-date="${dateText}"]`);
+    const noteInput = document.querySelector(`input[data-salary-month-note="${staffId}"][data-salary-date="${dateText}"]`);
+
+    const wageAmount = Number(wageInput?.value || 0);
+    const transportAmount = Number(transportInput?.value || 0);
+    const note = noteInput?.value || "";
+
+    if (wageAmount > 0 || transportAmount > 0 || note.trim() !== "") {
+      rows.push({
+        store_id: currentStoreId,
+        staff_id: staffId,
+        work_date: dateText,
+        wage_amount: wageAmount,
+        transport_amount: transportAmount,
+        note,
+        updated_by: currentUser?.id || null
+      });
+    }
+  }
+
+  const { error: deleteError } = await supabaseClient
+    .from("shop_salary_daily_records")
+    .delete()
+    .eq("store_id", currentStoreId)
+    .eq("staff_id", staffId)
+    .gte("work_date", monthStart)
+    .lte("work_date", monthEnd);
+
+  if (deleteError) {
+    alert("保存前清理旧工资数据失败：" + deleteError.message);
+    return;
+  }
+
+  if (rows.length > 0) {
+    const { error: insertError } = await supabaseClient
+      .from("shop_salary_daily_records")
+      .insert(rows);
+
+    if (insertError) {
+      alert("保存工资数据失败：" + insertError.message);
+      return;
+    }
+  }
+
+  await loadSalaryData();
+  selectedSalaryStaffId = staffId;
+  renderSalaryCards();
+
+  alert("该人员本月工资数据已保存。");
+}
+
 
 async function addSalaryStaff() {
   if (!canAdmin()) {
@@ -2331,7 +2572,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "5.7-salary-pdf-migration-guard",
+    version: "5.9-fix-salary-month-save",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
