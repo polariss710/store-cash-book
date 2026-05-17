@@ -1882,7 +1882,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "5.1-simplify-reserve-and-add-data-migration",
+    version: "5.2-step3-and-login-version",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

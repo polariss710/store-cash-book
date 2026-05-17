@@ -976,3 +976,12 @@ input[data-reserve-target]:disabled {
 .danger-action-btn:hover {
   opacity: 0.88;
 }
+
+
+.login-version {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 700;
+}
