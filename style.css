@@ -1182,3 +1182,132 @@ input[data-reserve-target]:disabled {
 .login-card .primary-btn {
   margin-top: 16px;
 }
+
+
+/* v57: 每日保存/删除按钮间距优化 */
+.save-btn.write-only {
+  margin-bottom: 12px;
+}
+
+/* v57: 工资明细打印区域 */
+.salary-print-area {
+  display: none;
+}
+
+.salary-export-btn {
+  background: #0e7490;
+  color: white;
+  font-weight: 700;
+}
+
+@media print {
+  body.salary-print-mode .app-header,
+  body.salary-print-mode #monthPage,
+  body.salary-print-mode #dayPage,
+  body.salary-print-mode #reservePage,
+  body.salary-print-mode #reportPage,
+  body.salary-print-mode #salaryPage > .card,
+  body.salary-print-mode #salaryStaffList {
+    display: none !important;
+  }
+
+  body.salary-print-mode #salaryPage {
+    display: block !important;
+  }
+
+  body.salary-print-mode .salary-print-area {
+    display: block !important;
+    background: white;
+    color: #111827;
+    padding: 10mm;
+  }
+
+  body.salary-print-mode .app-main {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  .salary-print-document {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  }
+
+  .salary-print-header {
+    background: #0f766e;
+    color: white;
+    border-radius: 8px;
+    padding: 12mm 10mm 9mm;
+    text-align: center;
+    margin-bottom: 8mm;
+  }
+
+  .salary-print-title {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .salary-print-subtitle {
+    color: #ccfbf1;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .salary-print-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 8mm;
+  }
+
+  .salary-print-box {
+    border: 1px solid #99f6e4;
+    background: #ecfeff;
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .salary-print-label {
+    font-size: 11px;
+    color: #0f766e;
+    font-weight: 700;
+  }
+
+  .salary-print-value {
+    font-size: 17px;
+    font-weight: 800;
+  }
+
+  .salary-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .salary-print-table th,
+  .salary-print-table td {
+    border: 1px solid #d1d5db;
+    padding: 6px;
+  }
+
+  .salary-print-table th {
+    background: #0f766e;
+    color: white;
+  }
+
+  .salary-print-table tbody tr:nth-child(even) {
+    background: #f0fdfa;
+  }
+
+  .salary-print-num {
+    text-align: right;
+  }
+
+  .salary-print-footer {
+    margin-top: 8mm;
+    text-align: right;
+    font-size: 11px;
+    color: #6b7280;
+  }
+}

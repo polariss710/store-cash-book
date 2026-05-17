@@ -717,6 +717,12 @@ async function openDay(day) {
     migrationTargetDateInput.value = formatDateKey(currentYear, currentMonth, currentDay);
   }
 
+  const migrationEnableCheckbox = document.getElementById("migrationEnableCheckbox");
+  if (migrationEnableCheckbox) {
+    migrationEnableCheckbox.checked = false;
+  }
+  setMigrationControlsEnabled(false);
+
   calculateCurrentDay();
   applyPermissions();
 }
@@ -1148,9 +1154,49 @@ async function saveCurrentDay() {
 }
 
 
+
+function setMigrationControlsEnabled(enabled) {
+  const dateInput = document.getElementById("migrationTargetDate");
+  const executeBtn = document.getElementById("migrationExecuteBtn");
+
+  if (dateInput) {
+    dateInput.disabled = !enabled;
+  }
+
+  if (executeBtn) {
+    executeBtn.disabled = !enabled;
+  }
+}
+
+function handleMigrationEnableToggle(checkbox) {
+  if (checkbox.checked) {
+    const ok = confirm(
+      "确定要开启数据迁移功能吗？\n\n" +
+      "数据迁移会把当前日期数据移动到指定日期，并可能覆盖目标日期已有数据。"
+    );
+
+    if (!ok) {
+      checkbox.checked = false;
+      setMigrationControlsEnabled(false);
+      return;
+    }
+
+    setMigrationControlsEnabled(true);
+  } else {
+    setMigrationControlsEnabled(false);
+  }
+}
+
+
 async function confirmAndMigrateCurrentDayData() {
   if (!canWrite()) {
     alert("没有迁移权限。");
+    return;
+  }
+
+  const checkbox = document.getElementById("migrationEnableCheckbox");
+  if (!checkbox || !checkbox.checked) {
+    alert("请先勾选「数据维护：允许迁移当前日期数据」。");
     return;
   }
 
@@ -1188,6 +1234,16 @@ async function confirmAndMigrateCurrentDayData() {
   );
 
   if (!ok) return;
+
+  const confirmText = prompt(
+    `最终确认：请输入 MIGRATE 继续。\n\n` +
+    `${sourceDate} → ${targetDate}`
+  );
+
+  if (confirmText !== "MIGRATE") {
+    alert("已取消迁移。");
+    return;
+  }
 
   const targetParts = targetDate.split("-").map(Number);
   const targetYear = targetParts[0];
@@ -2131,6 +2187,7 @@ function renderSalaryCards() {
 
     <div class="salary-card-actions salary-batch-actions">
       <button class="salary-save-btn" type="button" onclick="saveSalaryMonthlyRecords('${staff.id}')">保存该人员本月数据</button>
+      <button class="salary-export-btn" type="button" onclick="exportCurrentSalaryStaffPdf('${staff.id}')">导出该人员工资明细PDF</button>
       <button class="salary-delete-btn" type="button" onclick="deactivateSalaryStaff('${staff.id}')">删除人员卡片</button>
     </div>
   `;
@@ -2274,7 +2331,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "5.6-login-width-and-readme",
+    version: "5.7-salary-pdf-migration-guard",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,

@@ -22,9 +22,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- 版本号：以后只需要在这里把 35 改成新数字 -->
-  <link rel="stylesheet" href="style.css?v=56" />
+  <link rel="stylesheet" href="style.css?v=57" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="app.js?v=56" defer></script>
+  <script src="app.js?v=57" defer></script>
 </head>
 <body>
 
@@ -50,7 +50,7 @@
         使用管理员用户名和密码登录
       </div>
 
-      <div class="login-version">当前版本：v56</div>
+      <div class="login-version">当前版本：v57</div>
     </div>
   </section>
 
@@ -239,12 +239,25 @@
             </span>
           </div>
 
-          <div class="form-row">
-            <label for="migrationTargetDate">迁移到日期</label>
-            <input id="migrationTargetDate" type="date" />
+          <label class="maintenance-toggle">
+            <input
+              id="migrationEnableCheckbox"
+              type="checkbox"
+              onchange="handleMigrationEnableToggle(this)"
+            />
+            <span>数据维护：允许迁移当前日期数据</span>
+          </label>
+
+          <div class="maintenance-note">
+            默认关闭。勾选并确认后，才可以执行数据迁移。
           </div>
 
-          <button class="danger-action-btn" type="button" onclick="confirmAndMigrateCurrentDayData()">迁移当前日期数据</button>
+          <div class="form-row">
+            <label for="migrationTargetDate">迁移到日期</label>
+            <input id="migrationTargetDate" type="date" disabled />
+          </div>
+
+          <button id="migrationExecuteBtn" class="danger-action-btn" type="button" onclick="confirmAndMigrateCurrentDayData()" disabled>迁移当前日期数据</button>
         </div>
 
       </section>
@@ -312,8 +325,6 @@
             />
           </div>
         </div>
-<button class="execute-btn admin-only" type="button" onclick="confirmAndRebalanceReserve()">确认已整理备用金</button>
-        </div>
       </section>
 
 
@@ -363,6 +374,7 @@
         </div>
 
         <div id="salaryStaffList"></div>
+        <div id="salaryPrintArea" class="salary-print-area"></div>
       </section>
 
       <!-- 月度报表页面 -->
