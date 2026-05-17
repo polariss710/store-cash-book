@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="店铺记账" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>店铺记账系统</title>
 
   <link rel="stylesheet" href="style.css?v=33.5" />
 </head>
+
 <body>
 
   <!-- 登录页面 -->
@@ -47,7 +53,8 @@
       <div class="user-bar">
         <span id="currentUserText">未登录</span>
         <button class="small-header-btn" type="button" onclick="logout()">退出登录</button>
-        <button class="small-header-btn danger-header-btn" type="button" onclick="confirmAndGlobalLogout()">退出所有设备</button>
+        <button class="small-header-btn danger-header-btn" type="button"
+          onclick="confirmAndGlobalLogout()">退出所有设备</button>
       </div>
     </header>
 
@@ -85,14 +92,10 @@
 
           <div class="backup-buttons">
             <button class="sub-btn" type="button" onclick="exportCurrentMonthData()">导出本月备份</button>
-            <button class="sub-btn admin-only" type="button" onclick="document.getElementById('importFileInput').click()">导入备份</button>
-            <input
-              id="importFileInput"
-              type="file"
-              accept=".json,application/json"
-              style="display: none;"
-              onchange="importBackupFile(event)"
-            />
+            <button class="sub-btn admin-only" type="button"
+              onclick="document.getElementById('importFileInput').click()">导入备份</button>
+            <input id="importFileInput" type="file" accept=".json,application/json" style="display: none;"
+              onchange="importBackupFile(event)" />
           </div>
 
           <div class="backup-buttons">
@@ -224,7 +227,8 @@
           <h2>执行兑换</h2>
           <div id="exchangeActionArea" class="diff-area">请先确认上方兑换建议。</div>
           <button class="execute-btn" type="button" onclick="confirmAndApplyExchange()">确认执行兑换并更新备用金</button>
-          <button id="undoExchangeBtn" class="undo-exchange-btn" type="button" onclick="confirmAndUndoExchange()">撤销当天兑换</button>
+          <button id="undoExchangeBtn" class="undo-exchange-btn" type="button"
+            onclick="confirmAndUndoExchange()">撤销当天兑换</button>
         </div>
 
         <button class="save-btn write-only" type="button" onclick="saveCurrentDay()">保存当天数据</button>
@@ -331,4 +335,5 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js?v=33.5"></script>
 </body>
+
 </html>
