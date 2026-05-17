@@ -1331,3 +1331,28 @@ input[data-reserve-target]:disabled {
     break-after: page;
   }
 }
+
+
+/* v60: 工资明细 PDF 打印时底部留白改为白色 */
+@media print {
+  body.salary-print-mode {
+    background: white !important;
+  }
+
+  body.salary-print-mode .salary-print-area,
+  body.salary-print-mode .salary-print-document {
+    background: white !important;
+  }
+
+  body.salary-print-mode::before,
+  body.salary-print-mode::after {
+    display: none !important;
+    background: white !important;
+  }
+
+  body.salary-print-mode .app-page,
+  body.salary-print-mode .app-main,
+  body.salary-print-mode #salaryPage {
+    background: white !important;
+  }
+}
