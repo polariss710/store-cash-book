@@ -1853,7 +1853,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.9-japanese-weekday-on-day-cards",
+    version: "5.0-hide-reserve-preview-for-staff",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
@@ -2779,6 +2779,10 @@ async function confirmAndRebalanceReserve() {
 }
 
 function renderReservePreview(container, giveToReserve, takeFromReserve) {
+  if (!canAdmin()) {
+    return;
+  }
+
   const reserveData = getReserveData();
   const afterReserve = cloneReserveData(reserveData);
 
