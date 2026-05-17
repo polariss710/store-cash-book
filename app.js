@@ -387,6 +387,11 @@ function formatDateKey(year, month, day) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function getJapaneseWeekday(year, month, day) {
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  return weekdays[new Date(year, month - 1, day).getDay()];
+}
+
 
 function calculateFeeAmount(amount, rate) {
   const numericAmount = Number(amount || 0);
@@ -581,7 +586,7 @@ function renderMonth() {
     card.className = "day-card";
 
     const title = document.createElement("strong");
-    title.textContent = `${currentMonth}月${day}日`;
+    title.textContent = `${currentMonth}月${day}日（${getJapaneseWeekday(currentYear, currentMonth, day)}）`;
 
     const status = document.createElement("span");
 
@@ -695,7 +700,7 @@ async function openDay(day) {
   scrollToTop();
 
   document.getElementById("selectedDateTitle").textContent =
-    `${currentYear}年${currentMonth}月${currentDay}日`;
+    `${currentYear}年${currentMonth}月${currentDay}日（${getJapaneseWeekday(currentYear, currentMonth, currentDay)}）`;
 
   await loadReserveDataFromSupabase();
 
@@ -1848,7 +1853,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "4.8-fix-shop-prefix",
+    version: "4.9-japanese-weekday-on-day-cards",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
