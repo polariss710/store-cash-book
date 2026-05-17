@@ -1598,19 +1598,23 @@ function printMonthlyReport() {
 
   const summary = getMonthlyReportSummary(rows);
 
-  const rowHtml = rows.map(row => `
-    <tr>
-      <td>${escapeHtml(row.date)}</td>
-      <td class="num">${formatYen(row.cashIncome)}</td>
-      <td class="num">${formatYen(row.paypay)}</td>
-      <td class="num">${formatYen(row.point)}</td>
-      <td class="num">${formatYen(row.credit)}</td>
-      <td class="num">${formatYen(row.totalIncome)}</td>
-      <td class="num">${formatYen(row.feeTotal || 0)}</td>
-      <td class="num strong">${formatYen(row.totalIncomeAfterFee ?? row.totalIncome)}</td>
-      <td>${escapeHtml(row.exchangeStatus)}</td>
-    </tr>
-  `).join("");
+  const rowHtml = rows.map(row => {
+    const statusClass = row.exchangeStatus === "已执行" ? "status-done" : "status-pending";
+
+    return `
+      <tr>
+        <td>${escapeHtml(row.date)}</td>
+        <td class="num">${formatYen(row.cashIncome)}</td>
+        <td class="num">${formatYen(row.paypay)}</td>
+        <td class="num">${formatYen(row.point)}</td>
+        <td class="num">${formatYen(row.credit)}</td>
+        <td class="num">${formatYen(row.totalIncome)}</td>
+        <td class="num">${formatYen(row.feeTotal || 0)}</td>
+        <td class="num strong">${formatYen(row.totalIncomeAfterFee ?? row.totalIncome)}</td>
+        <td><span class="${statusClass}">${escapeHtml(row.exchangeStatus)}</span></td>
+      </tr>
+    `;
+  }).join("");
 
   const detailRowHtml = rows.map(row => `
     <tr>
@@ -1622,7 +1626,7 @@ function printMonthlyReport() {
       <td class="num">${row.cash100}</td>
       <td class="num">${row.cash50}</td>
       <td class="num">${row.cash10}</td>
-      <td class="num">${formatYen(row.cashTotal)}</td>
+      <td class="num strong">${formatYen(row.cashTotal)}</td>
     </tr>
   `).join("");
 
@@ -1632,166 +1636,301 @@ function printMonthlyReport() {
   <meta charset="UTF-8" />
   <title>${currentYear}年${currentMonth}月 店铺月度报表</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
       color: #111827;
-      margin: 24px;
+      margin: 0;
       line-height: 1.5;
+      background: #f0fdfa;
     }
+
+    .report-page {
+      margin: 24px;
+      background: white;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid #ccfbf1;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
+    }
+
+    .report-header {
+      background: linear-gradient(135deg, #111827 0%, #0f766e 100%);
+      color: white;
+      padding: 26px 28px;
+      text-align: center;
+    }
+
     h1 {
-      font-size: 24px;
-      margin: 0 0 4px;
-      text-align: center;
+      font-size: 26px;
+      margin: 0 0 6px;
+      letter-spacing: 0.03em;
     }
+
     .subtitle {
-      text-align: center;
-      color: #4b5563;
-      margin-bottom: 20px;
+      color: #ccfbf1;
+      font-size: 17px;
+      font-weight: 700;
     }
+
+    .content {
+      padding: 22px 24px 26px;
+    }
+
     .summary {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 10px;
       margin-bottom: 20px;
     }
+
     .box {
-      border: 1px solid #d1d5db;
-      border-radius: 10px;
-      padding: 10px;
-      background: #f9fafb;
+      border: 1px solid #99f6e4;
+      border-radius: 12px;
+      padding: 11px 12px;
+      background: #ecfeff;
     }
+
+    .box.highlight {
+      background: #0f766e;
+      color: white;
+      border-color: #0f766e;
+    }
+
+    .box.highlight .label {
+      color: #ccfbf1;
+    }
+
     .label {
       font-size: 12px;
-      color: #6b7280;
+      color: #0f766e;
+      font-weight: 700;
     }
+
     .value {
       font-size: 18px;
-      font-weight: 700;
+      font-weight: 800;
       margin-top: 4px;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
       font-size: 12px;
+      background: white;
     }
+
     th, td {
       border: 1px solid #d1d5db;
-      padding: 6px;
+      padding: 7px 8px;
       text-align: left;
     }
+
     th {
-      background: #f3f4f6;
+      background: #0f766e;
+      color: white;
+      font-weight: 800;
     }
+
+    tbody tr:nth-child(even) {
+      background: #f0fdfa;
+    }
+
     .num {
       text-align: right;
     }
+
     .strong {
-      font-weight: 700;
+      font-weight: 800;
+      color: #0f766e;
     }
+
     .section-title {
-      font-size: 16px;
-      font-weight: 700;
+      font-size: 17px;
+      font-weight: 800;
+      color: #134e4a;
       margin-top: 24px;
+      padding-left: 10px;
+      border-left: 5px solid #0f766e;
     }
+
     .footer {
       margin-top: 20px;
       text-align: right;
       font-size: 11px;
       color: #6b7280;
     }
+
+    .status-done,
+    .status-pending {
+      display: inline-block;
+      min-width: 52px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .status-done {
+      background: #dcfce7;
+      color: #047857;
+      border: 1px solid #86efac;
+    }
+
+    .status-pending {
+      background: #f3f4f6;
+      color: #4b5563;
+      border: 1px solid #d1d5db;
+    }
+
+    .no-print {
+      text-align: right;
+      padding: 14px 18px 0;
+    }
+
+    .print-btn {
+      border: 1px solid #0f766e;
+      background: #0f766e;
+      color: white;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
     @media print {
-      body { margin: 12mm; }
-      .no-print { display: none; }
+      body {
+        background: white;
+      }
+
+      .report-page {
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+      }
+
+      .no-print {
+        display: none;
+      }
+
+      .content {
+        padding: 14mm 10mm;
+      }
+
+      .report-header {
+        padding: 14mm 10mm 10mm;
+      }
+
+      .summary {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+      }
+
+      th, td {
+        padding: 5px 6px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="no-print" style="text-align:right;margin-bottom:12px;">
-    <button onclick="window.print()" style="padding:8px 14px;">打印 / 另存为PDF</button>
-  </div>
+  <div class="report-page">
+    <div class="no-print">
+      <button class="print-btn" onclick="window.print()">打印 / 另存为PDF</button>
+    </div>
 
-  <h1>店铺记账系统 月度报表</h1>
-  <div class="subtitle">${currentYear}年${currentMonth}月</div>
+    <div class="report-header">
+      <h1>店铺记账系统 月度报表</h1>
+      <div class="subtitle">${currentYear}年${currentMonth}月</div>
+    </div>
 
-  <div class="summary">
-    <div class="box">
-      <div class="label">已录入天数</div>
-      <div class="value">${summary.savedDays}天</div>
-    </div>
-    <div class="box">
-      <div class="label">现金收入合计</div>
-      <div class="value">${formatYen(summary.cashIncome)}</div>
-    </div>
-    <div class="box">
-      <div class="label">PayPay合计</div>
-      <div class="value">${formatYen(summary.paypay)}</div>
-    </div>
-    <div class="box">
-      <div class="label">积分合计</div>
-      <div class="value">${formatYen(summary.point)}</div>
-    </div>
-    <div class="box">
-      <div class="label">信用卡合计</div>
-      <div class="value">${formatYen(summary.credit)}</div>
-    </div>
-    <div class="box">
-      <div class="label">手续费前总收入</div>
-      <div class="value">${formatYen(summary.totalIncome)}</div>
-    </div>
-    <div class="box">
-      <div class="label">手续费合计</div>
-      <div class="value">${formatYen(summary.feeTotal)}</div>
-    </div>
-    <div class="box">
-      <div class="label">手续费后总收入</div>
-      <div class="value">${formatYen(summary.totalIncomeAfterFee)}</div>
-    </div>
-  </div>
+    <div class="content">
+      <div class="summary">
+        <div class="box">
+          <div class="label">已录入天数</div>
+          <div class="value">${summary.savedDays}天</div>
+        </div>
+        <div class="box">
+          <div class="label">现金收入合计</div>
+          <div class="value">${formatYen(summary.cashIncome)}</div>
+        </div>
+        <div class="box">
+          <div class="label">PayPay合计</div>
+          <div class="value">${formatYen(summary.paypay)}</div>
+        </div>
+        <div class="box">
+          <div class="label">积分合计</div>
+          <div class="value">${formatYen(summary.point)}</div>
+        </div>
+        <div class="box">
+          <div class="label">信用卡合计</div>
+          <div class="value">${formatYen(summary.credit)}</div>
+        </div>
+        <div class="box">
+          <div class="label">手续费前总收入</div>
+          <div class="value">${formatYen(summary.totalIncome)}</div>
+        </div>
+        <div class="box">
+          <div class="label">手续费合计</div>
+          <div class="value">${formatYen(summary.feeTotal)}</div>
+        </div>
+        <div class="box highlight">
+          <div class="label">手续费后总收入</div>
+          <div class="value">${formatYen(summary.totalIncomeAfterFee)}</div>
+        </div>
+      </div>
 
-  <div class="section-title">每日收入明细</div>
-  <table>
-    <thead>
-      <tr>
-        <th>日期</th>
-        <th>现金收入</th>
-        <th>PayPay</th>
-        <th>积分</th>
-        <th>信用卡</th>
-        <th>手续费前收入</th>
-        <th>手续费</th>
-        <th>手续费后收入</th>
-        <th>兑换状态</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rowHtml}
-    </tbody>
-  </table>
+      <div class="section-title">每日收入明细</div>
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>现金收入</th>
+            <th>PayPay</th>
+            <th>积分</th>
+            <th>信用卡</th>
+            <th>手续费前收入</th>
+            <th>手续费</th>
+            <th>手续费后收入</th>
+            <th>兑换状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowHtml}
+        </tbody>
+      </table>
 
-  <div class="section-title">现金数量明细</div>
-  <table>
-    <thead>
-      <tr>
-        <th>日期</th>
-        <th>10000円</th>
-        <th>5000円</th>
-        <th>1000円</th>
-        <th>500円</th>
-        <th>100円</th>
-        <th>50円</th>
-        <th>10円</th>
-        <th>现金总额</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${detailRowHtml}
-    </tbody>
-  </table>
+      <div class="section-title">现金数量明细</div>
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>10000円</th>
+            <th>5000円</th>
+            <th>1000円</th>
+            <th>500円</th>
+            <th>100円</th>
+            <th>50円</th>
+            <th>10円</th>
+            <th>现金总额</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${detailRowHtml}
+        </tbody>
+      </table>
 
-  <div class="footer">
-    输出时间：${new Date().toLocaleString("ja-JP")}
+      <div class="footer">
+        输出时间：${new Date().toLocaleString("ja-JP")}
+      </div>
+    </div>
   </div>
 </body>
 </html>`;
@@ -1821,7 +1960,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "3.9-target-stock-maintenance-lock",
+    version: "4.0-themed-print-report",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
