@@ -2144,7 +2144,8 @@ async function saveMonthlyExpenses() {
   renderMonthlyExpenseInputs();
   renderProfitSummary();
 
-  alert("月度支出已保存。");
+  alert("月度支出已保存。\n将回到收支汇总顶部。");
+  scrollToTop();
 }
 
 
@@ -2795,7 +2796,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "6.4-empty-zero-input-display",
+    version: "6.5-profit-save-scroll-top",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
