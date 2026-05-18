@@ -739,6 +739,12 @@ function showMonthPage() {
 }
 
 
+
+function formatInputAmount(value) {
+  const numberValue = Number(value || 0);
+  return numberValue === 0 ? "" : String(numberValue);
+}
+
 function prepareNumericTextInput(input) {
   input.type = "text";
   input.inputMode = "numeric";
@@ -2068,7 +2074,7 @@ function renderMonthlyExpenseInputs() {
         type="text"
         inputmode="numeric"
         pattern="[0-9]*"
-        value="${Number(record.amount || 0)}"
+        value="${formatInputAmount(record.amount)}"
         data-monthly-expense-amount="${category.key}"
         oninput="renderProfitSummary()"
       />
@@ -2320,7 +2326,7 @@ function renderSalaryCards() {
             type="text"
             inputmode="numeric"
             pattern="[0-9]*"
-            value="${Number(record.wage_amount || 0)}"
+            value="${formatInputAmount(record.wage_amount)}"
             data-salary-month-wage="${staff.id}"
             data-salary-date="${dateText}"
             oninput="updateSalaryCardLiveTotals(\'${staff.id}\')"
@@ -2331,7 +2337,7 @@ function renderSalaryCards() {
             type="text"
             inputmode="numeric"
             pattern="[0-9]*"
-            value="${Number(record.transport_amount || 0)}"
+            value="${formatInputAmount(record.transport_amount)}"
             data-salary-month-transport="${staff.id}"
             data-salary-date="${dateText}"
             oninput="updateSalaryCardLiveTotals(\'${staff.id}\')"
@@ -2789,7 +2795,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "6.3-profit-summary-ipad-input-migration-confirm",
+    version: "6.4-empty-zero-input-display",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
