@@ -1452,3 +1452,37 @@ input[data-reserve-target]:disabled {
     display: none !important;
   }
 }
+
+
+.profit-btn {
+  width: 100%;
+  background: #155e75;
+  color: white;
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+.profit-btn:hover {
+  opacity: 0.88;
+}
+
+.expense-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.expense-row label {
+  font-weight: 700;
+  color: #374151;
+}
+
+.expense-note-row {
+  grid-column: 1 / -1;
+}
+
+.expense-note-row input {
+  width: 100%;
+}

@@ -52,6 +52,8 @@ let currentMonthData = {};
 
 let salaryStaffList = [];
 let salaryMonthRecords = {};
+let monthlyExpenseRecords = {};
+let profitSalaryTotal = 0;
 let selectedSalaryStaffId = null;
 let currentReserveData = null;
 let isTargetMaintenanceEnabled = false;
@@ -736,6 +738,14 @@ function showMonthPage() {
   applyPermissions();
 }
 
+
+function prepareNumericTextInput(input) {
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.pattern = "[0-9]*";
+  input.autocomplete = "off";
+}
+
 function renderCashInputs() {
   const area = document.getElementById("cashInputArea");
   area.innerHTML = "";
@@ -748,8 +758,7 @@ function renderCashInputs() {
     label.textContent = `${denom}円`;
 
     const input = document.createElement("input");
-    input.type = "number";
-    input.min = "0";
+    prepareNumericTextInput(input);
     input.value = "";
     input.dataset.denom = denom;
 
@@ -804,8 +813,7 @@ function renderNonCashInputs() {
     label.textContent = item.label;
 
     const input = document.createElement("input");
-    input.type = "number";
-    input.min = "0";
+    prepareNumericTextInput(input);
     input.value = "";
     input.placeholder = "0";
     input.dataset.nonCash = item.key;
@@ -1234,16 +1242,6 @@ async function confirmAndMigrateCurrentDayData() {
   );
 
   if (!ok) return;
-
-  const confirmText = prompt(
-    `最终确认：请输入 MIGRATE 继续。\n\n` +
-    `${sourceDate} → ${targetDate}`
-  );
-
-  if (confirmText !== "MIGRATE") {
-    alert("已取消迁移。");
-    return;
-  }
 
   const targetParts = targetDate.split("-").map(Number);
   const targetYear = targetParts[0];
@@ -1931,6 +1929,219 @@ async function printMonthlyReport() {
 }
 
 
+
+/* =========================
+   收支汇总
+========================= */
+
+const monthlyExpenseCategories = [
+  { key: "rent", label: "房租" },
+  { key: "utilities", label: "水电" },
+  { key: "network", label: "网络" },
+  { key: "advertising", label: "广告" },
+  { key: "misc", label: "日常杂费" }
+];
+
+async function showProfitPage() {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  hideAllPages();
+  document.getElementById("profitPage").classList.add("active");
+  scrollToTop();
+
+  if (!currentStoreId) {
+    await loadDefaultStore();
+  }
+
+  const monthData = await loadMonthDataFromSupabase(currentYear, currentMonth);
+  setMonthData(monthData);
+  renderMonthSummary(monthData);
+
+  await loadMonthlyExpenses();
+  profitSalaryTotal = await loadProfitSalaryTotal();
+
+  renderMonthlyExpenseInputs();
+  renderProfitSummary();
+  applyPermissions();
+}
+
+async function loadProfitSalaryTotal() {
+  if (!currentStoreId) return 0;
+
+  const monthStart = formatDateKey(currentYear, currentMonth, 1);
+  const monthEnd = formatDateKey(
+    currentYear,
+    currentMonth,
+    getDaysInMonth(currentYear, currentMonth)
+  );
+
+  const { data, error } = await supabaseClient
+    .from("shop_salary_daily_records")
+    .select("wage_amount, transport_amount")
+    .eq("store_id", currentStoreId)
+    .gte("work_date", monthStart)
+    .lte("work_date", monthEnd);
+
+  if (error) {
+    alert("读取工资支出失败：" + error.message);
+    return 0;
+  }
+
+  return (data || []).reduce((sum, record) => {
+    return sum + Number(record.wage_amount || 0) + Number(record.transport_amount || 0);
+  }, 0);
+}
+
+async function loadMonthlyExpenses() {
+  monthlyExpenseRecords = {};
+
+  if (!currentStoreId) return;
+
+  const { data, error } = await supabaseClient
+    .from("shop_monthly_expenses")
+    .select("*")
+    .eq("store_id", currentStoreId)
+    .eq("expense_year", currentYear)
+    .eq("expense_month", currentMonth);
+
+  if (error) {
+    alert("读取月度支出失败：" + error.message);
+    return;
+  }
+
+  (data || []).forEach(record => {
+    monthlyExpenseRecords[record.category] = record;
+  });
+}
+
+function getCurrentMonthRevenueAfterFee() {
+  const rows = getDailyReportRows();
+  const summary = getMonthlyReportSummary(rows);
+
+  return Number(summary.totalIncomeAfterFee || 0);
+}
+
+function getExpenseInputData() {
+  const result = {};
+
+  monthlyExpenseCategories.forEach(category => {
+    const amountInput = document.querySelector(`input[data-monthly-expense-amount="${category.key}"]`);
+    const noteInput = document.querySelector(`input[data-monthly-expense-note="${category.key}"]`);
+
+    result[category.key] = {
+      category: category.key,
+      amount: Number(amountInput?.value || 0),
+      note: noteInput?.value || ""
+    };
+  });
+
+  return result;
+}
+
+function getCurrentOtherExpenseTotal() {
+  const data = getExpenseInputData();
+
+  return Object.values(data).reduce((sum, item) => {
+    return sum + Number(item.amount || 0);
+  }, 0);
+}
+
+function renderMonthlyExpenseInputs() {
+  const area = document.getElementById("monthlyExpenseInputArea");
+
+  if (!area) return;
+
+  area.innerHTML = "";
+
+  monthlyExpenseCategories.forEach(category => {
+    const record = monthlyExpenseRecords[category.key] || {};
+
+    const row = document.createElement("div");
+    row.className = "expense-row";
+
+    row.innerHTML = `
+      <label>${category.label}</label>
+      <input
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        value="${Number(record.amount || 0)}"
+        data-monthly-expense-amount="${category.key}"
+        oninput="renderProfitSummary()"
+      />
+      <div class="expense-note-row">
+        <input
+          type="text"
+          value="${escapeHtml(record.note || "")}"
+          data-monthly-expense-note="${category.key}"
+          placeholder="${category.label}备注，可选"
+        />
+      </div>
+    `;
+
+    area.appendChild(row);
+  });
+}
+
+function renderProfitSummary() {
+  const revenue = getCurrentMonthRevenueAfterFee();
+  const salary = Number(profitSalaryTotal || 0);
+  const expense = getCurrentOtherExpenseTotal();
+  const net = revenue - salary - expense;
+
+  const title = document.getElementById("profitMonthTitle");
+  const revenueText = document.getElementById("profitRevenueText");
+  const salaryText = document.getElementById("profitSalaryText");
+  const expenseText = document.getElementById("profitExpenseText");
+  const netText = document.getElementById("profitNetText");
+
+  if (title) title.textContent = `${currentYear}年${currentMonth}月 收支汇总`;
+  if (revenueText) revenueText.textContent = formatYen(revenue);
+  if (salaryText) salaryText.textContent = formatYen(salary);
+  if (expenseText) expenseText.textContent = formatYen(expense);
+  if (netText) netText.textContent = formatYen(net);
+}
+
+async function saveMonthlyExpenses() {
+  if (!canAdmin()) {
+    alert("没有权限。");
+    return;
+  }
+
+  const expenseData = getExpenseInputData();
+
+  const rows = Object.values(expenseData).map(item => ({
+    store_id: currentStoreId,
+    expense_year: currentYear,
+    expense_month: currentMonth,
+    category: item.category,
+    amount: item.amount,
+    note: item.note,
+    updated_by: currentUser?.id || null
+  }));
+
+  const { error } = await supabaseClient
+    .from("shop_monthly_expenses")
+    .upsert(rows, {
+      onConflict: "store_id,expense_year,expense_month,category"
+    });
+
+  if (error) {
+    alert("月度支出保存失败：" + error.message);
+    return;
+  }
+
+  await loadMonthlyExpenses();
+  renderMonthlyExpenseInputs();
+  renderProfitSummary();
+
+  alert("月度支出已保存。");
+}
+
+
 /* =========================
    工资结算
 ========================= */
@@ -2106,8 +2317,9 @@ function renderSalaryCards() {
         <td class="salary-month-date">${currentMonth}/${day}（${getJapaneseWeekday(currentYear, currentMonth, day)}）</td>
         <td>
           <input
-            type="number"
-            min="0"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
             value="${Number(record.wage_amount || 0)}"
             data-salary-month-wage="${staff.id}"
             data-salary-date="${dateText}"
@@ -2116,8 +2328,9 @@ function renderSalaryCards() {
         </td>
         <td>
           <input
-            type="number"
-            min="0"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
             value="${Number(record.transport_amount || 0)}"
             data-salary-month-transport="${staff.id}"
             data-salary-date="${dateText}"
@@ -2576,7 +2789,7 @@ function exportCurrentMonthData() {
 
   const backupData = {
     appName: "store-cash-book",
-    version: "6.2-hide-salary-export-buttons-in-print",
+    version: "6.3-profit-summary-ipad-input-migration-confirm",
     year: currentYear,
     month: currentMonth,
     fixedChangeAmount,
